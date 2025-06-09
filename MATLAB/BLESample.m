@@ -1,6 +1,6 @@
 clear
 clc
-clc
+clc % bleオブジェクトを削除するために2回clcを実行
 
 list = blelist
 
