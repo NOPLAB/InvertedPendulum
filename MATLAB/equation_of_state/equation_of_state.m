@@ -10,19 +10,11 @@ syms M m g l r Iw n G Jp bx btheta Kt Ke Ra La real
 T_cart = (1/2) * M * x_dot^2;
 
 % タイヤの運動エネルギー（回転）
-omega_wheel = x_dot / r;  % タイヤの角速度
+omega_wheel = x_dot / r; % タイヤの角速度
 T_wheel = (1/2) * n * Iw * omega_wheel^2;
 
 % 振子の運動エネルギー
-% 振子重心の位置
-xp = x + l * sin(phi);
-yp = l * cos(phi);
-
-% 振子重心の速度
-xp_dot = diff(xp, x) * x_dot + diff(xp, phi) * phi_dot;
-yp_dot = diff(yp, x) * x_dot + diff(yp, phi) * phi_dot;
-
-% 簡単化
+% 振子重心の位置と速度
 xp_dot = x_dot + l * phi_dot * cos(phi);
 yp_dot = -l * phi_dot * sin(phi);
 
@@ -37,7 +29,6 @@ T = T_cart + T_wheel + T_pendulum_trans + T_pendulum_rot;
 T = simplify(T);
 
 % 2. 位置エネルギーの計算
-V_potential = m * g * yp;
 V_potential = m * g * l * cos(phi);
 
 % 3. ラグランジアン
@@ -113,7 +104,7 @@ i_dot_expr = (V - Ra * i - Ke * G * x_dot / r) / La;
 f_nonlinear = [x_dot; 
                x_ddot_expr; 
                phi_dot; 
-               phi_ddot_expr; 
+               phi_ddot_expr;
                i_dot_expr];
 
 % 非線形関数の保存

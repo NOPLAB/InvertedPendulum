@@ -34,12 +34,8 @@ function [A, B, C, D] = pendulum_state_space(p_M, p_m, p_g, p_l, p_r, p_Iw, p_n,
 matrix_params = [p_M; p_m; p_g; p_l; p_r; p_Iw; p_n; p_G; p_Jp; p_bx; p_btheta; p_Kt; p_Ke; p_Ra; p_La];
 
 % パラメータ値の代入
-A_sym = linear_A_matrix(matrix_params);
-B_sym = linear_B_matrix(matrix_params);
-
-% 数値に変換
-A = double(A_sym);
-B = double(B_sym);
+A = linear_A_matrix(matrix_params);
+B = linear_B_matrix(matrix_params);
 
 % C行列（出力: y = [x; phi]）
 C = [1, 0, 0, 0, 0;
