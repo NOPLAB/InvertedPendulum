@@ -1,4 +1,4 @@
-function [A, B, C, D] = pendulum_state_space(p_M, p_m, p_g, p_l, p_r, p_Iw, p_n, p_G, p_Jp, p_bx, p_btheta, p_Kt, p_Ke, p_Ra, p_La)
+function [A, B, C, D] = pendulum_state_space(p_M, p_m, p_g, p_l, p_r, p_Iw, p_G, p_Jp, p_bx, p_btheta, p_Kt, p_Ke, p_Ra, p_La)
 % 台車型倒立振子の状態空間表現（上向き基準）
 %
 % 状態方程式: dx/dt = A*x + B*u
@@ -31,7 +31,7 @@ function [A, B, C, D] = pendulum_state_space(p_M, p_m, p_g, p_l, p_r, p_Iw, p_n,
 % C: 出力行列 (2x5)
 % D: 直達行列 (2x1)
 
-matrix_params = [p_M; p_m; p_g; p_l; p_r; p_Iw; p_n; p_G; p_Jp; p_bx; p_btheta; p_Kt; p_Ke; p_Ra; p_La];
+matrix_params = [p_M; p_m; p_g; p_l; p_r; p_Iw; p_G; p_Jp; p_bx; p_btheta; p_Kt; p_Ke; p_Ra; p_La];
 
 % パラメータ値の代入
 A = linear_A_matrix(matrix_params);
