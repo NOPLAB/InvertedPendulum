@@ -10,28 +10,10 @@
 
 #include "device.hpp"
 #include "interrupt.hpp"
+#include "interval.hpp"
 #include "mux.hpp"
 
-class AppState {
-public:
-  IDevice *devices[1];
-
-  IAdcInterruptHandler *adcInterruptHandlers[1];
-
-  Mux *mux;
-
-public:
-  AppState() {
-    mux = new Mux();
-    devices[0] = mux;
-    adcInterruptHandlers[0] = mux;
-  };
-};
-
 class App {
-private:
-  AppState *state = new AppState();
-
 public:
   App() {}
 
@@ -55,6 +37,11 @@ private:
 
 public:
   InterruptHandler *interruptHandler = new InterruptHandler();
+  IAdcInterruptHandler *adcInterruptHandlers[1];
+  ITimerInterruptHandler *timerInterruptHandlers[1];
+
+  Interval *interval_caller = nullptr;
+  Mux *mux = nullptr;
 };
 
 #endif /* APP_INC_APP_HPP_ */

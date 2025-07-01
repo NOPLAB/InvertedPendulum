@@ -19,19 +19,18 @@ int App::run() {
 }
 
 void App::initialize() {
-  this->interruptHandler->registerAdc(this->state->adcInterruptHandlers, 1);
-  this->interruptHandler->registerTimer(nullptr, 0);
+  this->interval_caller = new Interval([]() { App::getInstance().interval(); });
 
-  for (auto device : this->state->devices) {
-    {
-      device->initialize();
-    }
-  }
+  this->adcInterruptHandlers[0] = this->mux;
+  this->timerInterruptHandlers[0] = this->interval_caller;
+
+  this->interruptHandler->registerAdc(this->adcInterruptHandlers, 1);
+  this->interruptHandler->registerTimer(this->timerInterruptHandlers, 1);
 }
 
 void App::loop() {}
 
 void App::interval() {
   MuxCorrectedValues values;
-  this->state->mux->getCorrectedValues(&values);
+  this->mux->getCorrectedValues(&values);
 }
