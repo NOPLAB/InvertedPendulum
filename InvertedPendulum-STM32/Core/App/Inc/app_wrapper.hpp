@@ -7,9 +7,6 @@ extern "C" {
 
 void AppRun(void);
 
-void App_DMA1_Channel1_IRQHandler();
-void App_TIM6_DAC1_IRQHandler();
-
 #ifdef __cplusplus
 }
 #endif

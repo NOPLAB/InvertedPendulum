@@ -8,9 +8,9 @@
 #ifndef APP_INC_APP_HPP_
 #define APP_INC_APP_HPP_
 
+#include "adc.hpp"
 #include "interrupt.hpp"
 #include "interval.hpp"
-#include "mux.hpp"
 
 class App {
 public:
@@ -42,7 +42,7 @@ private:
   ITimerInterruptHandler *timerInterruptHandlers[1];
 
   Interval *interval_caller = nullptr;
-  Mux *mux = nullptr;
+  Adc *mux = nullptr;
 };
 
 #endif /* APP_INC_APP_HPP_ */

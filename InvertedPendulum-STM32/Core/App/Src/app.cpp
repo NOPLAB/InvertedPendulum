@@ -7,7 +7,6 @@
 
 #include "app.hpp"
 #include "main.h"
-#include "mux.hpp"
 #include "stm32f3xx_hal_gpio.h"
 
 int App::run() {
@@ -21,7 +20,7 @@ int App::run() {
 }
 
 void App::initialize() {
-  this->mux = new Mux();
+  this->mux = new Adc();
   this->interval_caller = new Interval([]() { App::getInstance().interval(); });
 
   this->adcInterruptHandlers[0] = this->mux;
@@ -32,11 +31,12 @@ void App::initialize() {
 }
 
 void App::loop() {
-  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
   HAL_Delay(100); // 100msの遅延
 }
 
 void App::interval() {
-  MuxCorrectedValues values;
-  App::getInstance().mux->getCorrectedValues(&values);
+  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+  AdcCorrectedValues values;
+  this->mux->getCorrectedValues(&values);
+  this->mux->scanAdcValues();
 }

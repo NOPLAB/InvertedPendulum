@@ -3,10 +3,10 @@
 
 void AppRun(void) { App::getInstance().run(); }
 
-void App_DMA1_Channel1_IRQHandler() {
-  App::getInstance().getInterruptHandler()->handleAdcDMAInterrupts();
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+  App::getInstance().getInterruptHandler()->handleAdcDMAInterrupts(hadc);
 }
 
-void App_TIM6_DAC1_IRQHandler() {
-  App::getInstance().getInterruptHandler()->handleTimerInterrupts();
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+  App::getInstance().getInterruptHandler()->handleTimerInterrupts(htim);
 }

@@ -31,7 +31,7 @@ public:
     this->adcHandlersNum = handlerNum;
   }
 
-  void handleAdcDMAInterrupts(ADC_HandleTypeDef *hadc = nullptr) {
+  void handleAdcDMAInterrupts(ADC_HandleTypeDef *hadc) {
     for (int i = 0; i < adcHandlersNum; i++) {
       ADC_HandleTypeDef *handler = adcHandlers[i]->adcHandlerType();
       if (handler == hadc) {
@@ -45,7 +45,7 @@ public:
     this->timerHandlersNum = handlerNum;
   }
 
-  void handleTimerInterrupts(TIM_HandleTypeDef *htim = nullptr) {
+  void handleTimerInterrupts(TIM_HandleTypeDef *htim) {
     for (int i = 0; i < timerHandlersNum; i++) {
       TIM_HandleTypeDef *handler = timerHandlers[i]->timerHandlerType();
       if (handler == htim) {

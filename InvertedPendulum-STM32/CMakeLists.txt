@@ -50,7 +50,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/App/Src/app_wrapper.cpp
     Core/App/Src/app.cpp
-    Core/App/Src/mux.cpp
+    Core/App/Src/adc.cpp
 )
 
 # Add include paths

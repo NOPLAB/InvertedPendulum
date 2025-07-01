@@ -4,38 +4,43 @@
 #include "adc.h"
 #include "interrupt.hpp"
 
-#define MUX_CHANNELS 16
+#define ADC_CHANNELS 3
+#define MUX_CHANNELS 8
 
-struct MuxCorrectedValues {
-  float value[MUX_CHANNELS];
+struct AdcCorrectedValues {
+  float p_1;
+  float p_2;
+  float mux_value[MUX_CHANNELS];
 };
 
-class Mux : public IAdcInterruptHandler {
+class Adc : public IAdcInterruptHandler {
 private:
-  uint32_t adcValues[MUX_CHANNELS] = {0};
-  MuxCorrectedValues correctedValues;
+  uint8_t selectedChannel = 0;
+  uint16_t rawAdcValues[ADC_CHANNELS] = {0};
+  uint16_t muxAdcValues[MUX_CHANNELS] = {0};
+  AdcCorrectedValues correctedValues;
 
 public:
-  Mux();
-  ~Mux();
+  Adc();
+  ~Adc();
 
 public: // IAdcHandler
   ADC_HandleTypeDef *adcHandlerType() const override { return &hadc1; }
 
-  void handleAdcInterrupt() override { this->switchMuxChannel(); }
+  void handleAdcInterrupt() override {
+    this->muxAdcValues[selectedChannel] = this->rawAdcValues[0];
+    this->switchMuxChannel();
+  }
 
 public:
-  void getCorrectedValues(MuxCorrectedValues *values);
+  void scanAdcValues() {
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)this->rawAdcValues, ADC_CHANNELS);
+  }
+
+  void getCorrectedValues(AdcCorrectedValues *values);
 
 private:
-  uint8_t selectedChannel = 0;
-
   void switchMuxChannel() {
-    this->selectedChannel++;
-    if (this->selectedChannel >= MUX_CHANNELS) {
-      this->selectedChannel = 0;
-    }
-
     HAL_GPIO_WritePin(Mux_A_GPIO_Port, Mux_A_Pin,
                       (this->selectedChannel & 0x01) ? GPIO_PIN_SET
                                                      : GPIO_PIN_RESET);
@@ -45,6 +50,11 @@ private:
     HAL_GPIO_WritePin(Mux_C_GPIO_Port, Mux_C_Pin,
                       (this->selectedChannel & 0x04) ? GPIO_PIN_SET
                                                      : GPIO_PIN_RESET);
+
+    this->selectedChannel++;
+    if (this->selectedChannel >= MUX_CHANNELS) {
+      this->selectedChannel = 0;
+    }
   }
 };
 
