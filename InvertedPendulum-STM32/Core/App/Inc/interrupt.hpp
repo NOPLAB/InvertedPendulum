@@ -31,7 +31,7 @@ public:
     this->adcHandlersNum = handlerNum;
   }
 
-  void handleAdcInterrupts(ADC_HandleTypeDef *hadc = nullptr) {
+  void handleAdcDMAInterrupts(ADC_HandleTypeDef *hadc = nullptr) {
     for (int i = 0; i < adcHandlersNum; i++) {
       ADC_HandleTypeDef *handler = adcHandlers[i]->adcHandlerType();
       if (handler == hadc) {

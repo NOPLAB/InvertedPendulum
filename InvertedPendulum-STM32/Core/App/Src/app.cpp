@@ -6,7 +6,9 @@
  */
 
 #include "app.hpp"
+#include "main.h"
 #include "mux.hpp"
+#include "stm32f3xx_hal_gpio.h"
 
 int App::run() {
   this->initialize();
@@ -29,7 +31,10 @@ void App::initialize() {
   this->interruptHandler->registerTimer(this->timerInterruptHandlers, 1);
 }
 
-void App::loop() {}
+void App::loop() {
+  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+  HAL_Delay(100); // 100msの遅延
+}
 
 void App::interval() {
   MuxCorrectedValues values;

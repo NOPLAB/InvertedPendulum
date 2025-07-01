@@ -22,6 +22,7 @@
 #include "stm32f3xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "app_wrapper.hpp"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +56,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern DMA_HandleTypeDef hdma_adc1;
 extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
 
@@ -199,6 +201,20 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles DMA1 channel1 global interrupt.
+  */
+void DMA1_Channel1_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel1_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_adc1);
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
+  App_DMA1_Channel1_IRQHandler();
+  /* USER CODE END DMA1_Channel1_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM6 global and DAC1 underrun error interrupts.
   */
 void TIM6_DAC1_IRQHandler(void)
@@ -208,7 +224,7 @@ void TIM6_DAC1_IRQHandler(void)
   /* USER CODE END TIM6_DAC1_IRQn 0 */
   HAL_TIM_IRQHandler(&htim6);
   /* USER CODE BEGIN TIM6_DAC1_IRQn 1 */
-
+  App_TIM6_DAC1_IRQHandler();
   /* USER CODE END TIM6_DAC1_IRQn 1 */
 }
 

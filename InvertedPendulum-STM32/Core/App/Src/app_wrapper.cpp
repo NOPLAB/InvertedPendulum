@@ -1,16 +1,12 @@
 #include "app_wrapper.hpp"
 #include "app.hpp"
 
-static App *appInstance = nullptr;
+void AppRun(void) { App::getInstance().run(); }
 
-void AppWrapperInit(void) {
-  if (appInstance == nullptr) {
-    appInstance = new App();
-  }
+void App_DMA1_Channel1_IRQHandler() {
+  App::getInstance().getInterruptHandler()->handleAdcDMAInterrupts();
 }
 
-void AppWrapperRun(void) {
-  if (appInstance != nullptr) {
-    appInstance->run();
-  }
+void App_TIM6_DAC1_IRQHandler() {
+  App::getInstance().getInterruptHandler()->handleTimerInterrupts();
 }
