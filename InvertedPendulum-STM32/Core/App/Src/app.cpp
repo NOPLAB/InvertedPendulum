@@ -2,7 +2,7 @@
  * app.cpp
  *
  *  Created on: Jun 30, 2025
- *      Author: nopla
+ *      Author: nop
  */
 
 #include "app.hpp"

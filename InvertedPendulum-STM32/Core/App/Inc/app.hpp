@@ -2,7 +2,7 @@
  * app.hpp
  *
  *  Created on: Jun 30, 2025
- *      Author: nopla
+ *      Author: nop
  */
 
 #ifndef APP_INC_APP_HPP_
