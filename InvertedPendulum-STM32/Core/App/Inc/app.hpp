@@ -16,7 +16,6 @@ class AppState {
 public:
   IDevice *devices[1];
 
-  InterruptHandler *interruptHandler;
   IAdcInterruptHandler *adcInterruptHandlers[1];
 
   Mux *mux;
@@ -26,13 +25,11 @@ public:
     mux = new Mux();
     devices[0] = mux;
     adcInterruptHandlers[0] = mux;
-    interruptHandler = new InterruptHandler(adcInterruptHandlers, 1);
   };
 };
 
 class App {
-public:
-  // アプリケーションが持つステート
+private:
   AppState *state = new AppState();
 
 public:
@@ -55,6 +52,9 @@ private:
 
   // 一定時間ごとに呼ばれる
   void interval();
+
+public:
+  InterruptHandler *interruptHandler = new InterruptHandler();
 };
 
 #endif /* APP_INC_APP_HPP_ */

@@ -6,6 +6,7 @@
  */
 
 #include "app.hpp"
+#include "mux.hpp"
 
 int App::run() {
   this->initialize();
@@ -18,6 +19,9 @@ int App::run() {
 }
 
 void App::initialize() {
+  this->interruptHandler->registerHandlers(this->state->adcInterruptHandlers,
+                                           1);
+
   for (auto device : this->state->devices) {
     {
       device->initialize();
@@ -27,4 +31,7 @@ void App::initialize() {
 
 void App::loop() {}
 
-void App::interval() {}
+void App::interval() {
+  MuxCorrectedValues values;
+  this->state->mux->getCorrectedValues(&values);
+}

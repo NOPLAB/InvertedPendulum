@@ -12,11 +12,13 @@ public:
 
 class InterruptHandler {
 private:
-  IAdcInterruptHandler **adcHandlers;
+  IAdcInterruptHandler **adcHandlers = nullptr;
   int adcHandlersNum = 0;
 
 public:
-  InterruptHandler(IAdcInterruptHandler *handlers[], int handlerNum) {
+  InterruptHandler() {}
+
+  void registerHandlers(IAdcInterruptHandler *handlers[], int handlerNum) {
     this->adcHandlers = handlers;
     this->adcHandlersNum = handlerNum;
   }
