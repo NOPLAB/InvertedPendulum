@@ -2,6 +2,7 @@
 #define ADC__HPP_
 
 #include "stm32f3xx_hal.h"
+#include "stm32f3xx_hal_adc.h"
 
 class IAdcInterruptHandler {
 public:
@@ -20,11 +21,10 @@ public:
     this->adcHandlersNum = handlerNum;
   }
 
-  void handleAdcInterrupts() {
+  void handleAdcInterrupts(ADC_HandleTypeDef *hadc = nullptr) {
     for (int i = 0; i < adcHandlersNum; i++) {
-      ADC_HandleTypeDef *hadc = adcHandlers[i]->adcHandlerType();
-      if (hadc != nullptr && hadc->Instance != nullptr) {
-        HAL_ADC_IRQHandler(hadc);
+      ADC_HandleTypeDef *handler = adcHandlers[i]->adcHandlerType();
+      if (handler == hadc) {
         adcHandlers[i]->handleAdcInterrupt();
       }
     }

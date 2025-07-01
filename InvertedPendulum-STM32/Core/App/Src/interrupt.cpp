@@ -7,5 +7,5 @@ inline void HAL_ADC_IRQHandler(ADC_HandleTypeDef *hadc) {
     return; // Null check for safety
   }
 
-  App::getInstance().state->interruptHandler->handleAdcInterrupts();
+  App::getInstance().state->interruptHandler->handleAdcInterrupts(hadc);
 }

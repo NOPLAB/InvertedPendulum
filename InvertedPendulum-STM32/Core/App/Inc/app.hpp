@@ -14,10 +14,10 @@
 
 class AppState {
 public:
+  IDevice *devices[1];
+
   InterruptHandler *interruptHandler;
   IAdcInterruptHandler *adcInterruptHandlers[1];
-
-  IDevice *devices[1];
 
   Mux *mux;
 
