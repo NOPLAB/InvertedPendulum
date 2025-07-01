@@ -143,16 +143,16 @@ matlabFunction(A_cart, B_cart, C_cart, ...
 % 非線形台車・振子システム（F_motorを入力として）
 % 加速度の解
 
-% accel_solution = M_mat \ rhs;
-% x_ddot_F = subs(accel_solution(1), i, F_motor*r/(2*G*Kt));
-% phi_ddot_F = subs(accel_solution(2), i, F_motor*r/(2*G*Kt));
-% 
-% f_cart_nonlinear = [x_dot;
-%                     x_ddot_F;
-%                     phi_dot;
-%                     phi_ddot_F];
-% 
-% matlabFunction(f_cart_nonlinear, ...
-%     'File', 'equation_of_state_v2/dynamics_functions/cart_pendulum_nonlinear', ...
-%     'Vars', {[x; x_dot; phi; phi_dot], F_motor, params}, ...
-%     'Outputs', {'dX_cart'});
+accel_solution = M_mat \ rhs;
+x_ddot_F = subs(accel_solution(1), i, F_motor*r/(2*G*Kt));
+phi_ddot_F = subs(accel_solution(2), i, F_motor*r/(2*G*Kt));
+
+f_cart_nonlinear = [x_dot;
+                    x_ddot_F;
+                    phi_dot;
+                    phi_ddot_F];
+
+matlabFunction(f_cart_nonlinear, ...
+    'File', 'equation_of_state_v2/dynamics_functions/cart_pendulum_nonlinear', ...
+    'Vars', {[x; x_dot; phi; phi_dot], F_motor, params}, ...
+    'Outputs', {'dX_cart'});

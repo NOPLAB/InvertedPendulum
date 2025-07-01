@@ -1,24 +1,26 @@
 %% use_separated_systems.m
 % 分離されたシステムの使用例
 
-clc; close all;
+clear; clc; close all;
+
+load("estimate_parameters/parameters.mat")
 
 %% パラメータの設定
 params = [
-    p_M;    % M: 台車質量 [kg]
-    p_m;    % m: 振子質量 [kg]
-    p_g;   % g: 重力加速度 [m/s^2]
-    p_l;    % l: 振子長さ [m]
-    p_r;   % r: タイヤ半径 [m]
-    p_Iw;  % Iw: タイヤ慣性モーメント [kg*m^2]
+    p_M;     % M: 台車質量 [kg]
+    p_m;     % m: 振子質量 [kg]
+    p_g;     % g: 重力加速度 [m/s^2]
+    p_l;     % l: 振子長さ [m]
+    p_r;     % r: タイヤ半径 [m]
+    p_Iw;    % Iw: タイヤ慣性モーメント [kg*m^2]
     p_G;     % G: ギア比
-    p_Jp;  % Jp: 振子慣性モーメント [kg*m^2]
+    p_Jp;    % Jp: 振子慣性モーメント [kg*m^2]
     p_bx;    % bx: 台車の粘性摩擦係数 [N*s/m]
-    p_btheta;  % btheta: 振子の粘性摩擦係数 [N*m*s/rad]
+    p_btheta;% btheta: 振子の粘性摩擦係数 [N*m*s/rad]
     p_Kt;    % Kt: トルク定数 [N*m/A]
     p_Ke;    % Ke: 逆起電力定数 [V*s/rad]
     p_Ra;    % Ra: 電機子抵抗 [Ω]
-    p_La    % La: 電機子インダクタンス [H]
+    p_La     % La: 電機子インダクタンス [H]
 ];
 
 %% 1. 分離されたシステムの行列を取得
