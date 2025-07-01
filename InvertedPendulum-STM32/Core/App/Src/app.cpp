@@ -19,8 +19,8 @@ int App::run() {
 }
 
 void App::initialize() {
-  this->interruptHandler->registerHandlers(this->state->adcInterruptHandlers,
-                                           1);
+  this->interruptHandler->registerAdc(this->state->adcInterruptHandlers, 1);
+  this->interruptHandler->registerTimer(nullptr, 0);
 
   for (auto device : this->state->devices) {
     {
