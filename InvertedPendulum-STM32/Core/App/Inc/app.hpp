@@ -8,7 +8,6 @@
 #ifndef APP_INC_APP_HPP_
 #define APP_INC_APP_HPP_
 
-#include "device.hpp"
 #include "interrupt.hpp"
 #include "interval.hpp"
 #include "mux.hpp"
@@ -25,7 +24,6 @@ public:
   // アプリケーションを実行
   int run();
 
-private:
   // 初期化
   void initialize();
 
@@ -36,6 +34,9 @@ private:
   void interval();
 
 public:
+  InterruptHandler *getInterruptHandler() { return this->interruptHandler; }
+
+private:
   InterruptHandler *interruptHandler = new InterruptHandler();
   IAdcInterruptHandler *adcInterruptHandlers[1];
   ITimerInterruptHandler *timerInterruptHandlers[1];

@@ -19,6 +19,7 @@ int App::run() {
 }
 
 void App::initialize() {
+  this->mux = new Mux();
   this->interval_caller = new Interval([]() { App::getInstance().interval(); });
 
   this->adcInterruptHandlers[0] = this->mux;
@@ -32,5 +33,5 @@ void App::loop() {}
 
 void App::interval() {
   MuxCorrectedValues values;
-  this->mux->getCorrectedValues(&values);
+  App::getInstance().mux->getCorrectedValues(&values);
 }
