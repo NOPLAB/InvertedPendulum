@@ -11,6 +11,10 @@
 #include "adc.hpp"
 #include "interrupt.hpp"
 #include "interval.hpp"
+#include "motor.hpp"
+
+#define ADC_INTERRUPT_HANDLERS_NUM 2
+#define TIMER_INTERRUPT_HANDLERS_NUM 1
 
 class App {
 public:
@@ -38,11 +42,15 @@ public:
 
 private:
   InterruptHandler *interruptHandler = new InterruptHandler();
-  IAdcInterruptHandler *adcInterruptHandlers[1];
-  ITimerInterruptHandler *timerInterruptHandlers[1];
+  IAdcInterruptHandler *adcInterruptHandlers[ADC_INTERRUPT_HANDLERS_NUM];
+  ITimerInterruptHandler *timerInterruptHandlers[TIMER_INTERRUPT_HANDLERS_NUM];
 
   Interval *interval_caller = nullptr;
-  Adc *mux = nullptr;
+
+  Adc1 *adc1 = nullptr;
+  Adc2 *adc2 = nullptr;
+
+  Motors *motors = nullptr;
 };
 
 #endif /* APP_INC_APP_HPP_ */

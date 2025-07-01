@@ -4,25 +4,24 @@
 #include "adc.h"
 #include "interrupt.hpp"
 
-#define ADC_CHANNELS 3
+#define ADC1_CHANNELS 3
 #define MUX_CHANNELS 8
 
-struct AdcCorrectedValues {
+struct Adc1CorrectedValues {
   float p_1;
   float p_2;
   float mux_value[MUX_CHANNELS];
 };
 
-class Adc : public IAdcInterruptHandler {
+class Adc1 : public IAdcInterruptHandler {
 private:
   uint8_t selectedChannel = 0;
-  uint16_t rawAdcValues[ADC_CHANNELS] = {0};
+  uint16_t rawAdcValues[ADC1_CHANNELS] = {0};
   uint16_t muxAdcValues[MUX_CHANNELS] = {0};
-  AdcCorrectedValues correctedValues;
+  Adc1CorrectedValues correctedValues;
 
 public:
-  Adc();
-  ~Adc();
+  Adc1() { HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED); }
 
 public: // IAdcHandler
   ADC_HandleTypeDef *adcHandlerType() const override { return &hadc1; }
@@ -34,10 +33,22 @@ public: // IAdcHandler
 
 public:
   void scanAdcValues() {
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)this->rawAdcValues, ADC_CHANNELS);
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)this->rawAdcValues, ADC1_CHANNELS);
   }
 
-  void getCorrectedValues(AdcCorrectedValues *values);
+  void getCorrectedValues(Adc1CorrectedValues *values) {
+    this->correctedValues.p_1 =
+        static_cast<float>(this->rawAdcValues[0]) / 4095.0f;
+    this->correctedValues.p_2 =
+        static_cast<float>(this->rawAdcValues[1]) / 4095.0f;
+
+    for (int i = 0; i < MUX_CHANNELS; i++) {
+      this->correctedValues.mux_value[i] =
+          static_cast<float>(this->muxAdcValues[i]) / 4095.0f;
+    }
+
+    *values = this->correctedValues;
+  }
 
 private:
   void switchMuxChannel() {
@@ -56,6 +67,41 @@ private:
       this->selectedChannel = 0;
     }
   }
+};
+
+#define ADC2_CHANNELS 2
+
+struct Adc2CorrectedValues {
+  float currentR;
+  float currentL;
+};
+
+class Adc2 : public IAdcInterruptHandler {
+private:
+  uint16_t rawAdcValues[ADC2_CHANNELS] = {0};
+  Adc2CorrectedValues correctedValues;
+
+public:
+  Adc2() {}
+
+public:
+  ADC_HandleTypeDef *adcHandlerType() const override { return &hadc2; }
+
+  void handleAdcInterrupt() override {
+    this->correctedValues.currentR =
+        static_cast<float>(this->rawAdcValues[0]) / 4095.0f;
+    this->correctedValues.currentL =
+        static_cast<float>(this->rawAdcValues[1]) / 4095.0f;
+  }
+
+public:
+  void scanAdcValues() {
+    HAL_ADC_Start_DMA(&hadc2, (uint32_t *)this->rawAdcValues, ADC2_CHANNELS);
+  }
+
+  void getCorrectedValues(Adc2CorrectedValues *values) {
+    *values = this->correctedValues;
+  };
 };
 
 #endif /* MUX__HPP_ */
