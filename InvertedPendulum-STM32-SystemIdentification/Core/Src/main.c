@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "qei.h"
 
@@ -44,15 +45,14 @@
 
 #define PRESCALER (6399 - 1)
 
-#define THETA_REF 0
-#define ADV_TO_RAD 0.0056
+#define ADV_TO_RAD 0.00096633 // (333.3 * ((2.0*pi)/360.0)) / 4.85 * 3.3 / (2^12)
 #define MAX_V 7.2
 //#define GEAR_RATIO 6.67
 //#define ENC_PULSE 12
 //#define WHEEL_R 0.0255
 #define PULSE_TO_METER 0.0005
 
-#define DT (1.0 / 1000.0)
+#define DT (1.0 / 100.0)
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -67,8 +67,8 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 bool start = false;
 
-uint16_t ad;
-uint16_t zero_ad;
+uint16_t ad = 0;
+uint16_t zero_ad = 0;
 float theta = 0, theta_pre = 0, dtheta = 0;
 float x = 0, x_pre = 0, dx = 0;
 float e = 0, ed = 0, ei = 0, e_pre = 0;                                 //振子の角度
@@ -77,6 +77,8 @@ float v_ref = 0, duty_ratio = 0;                       //電圧指令値　，�
 QEI_HandleTypeDef hENC_Left, hENC_Right;
 
 int enc_left = 0, enc_right = 0;
+
+uint64_t loop_counter = 0;
 
 //double gain_k[4] = {1.0000, 0.4757, 254.4060, 59.5530};
 /* USER CODE END PV */
@@ -158,7 +160,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			enc_right += QEI_GetPulses(&hENC_Right);
 			QEI_Reset(&hENC_Right);
 
-			theta = (THETA_REF - (float) (ad - zero_ad) * ADV_TO_RAD); // nop version
+			theta = -(float)(ad - zero_ad) * ADV_TO_RAD; // nop version
 			dtheta = (theta - theta_pre) / DT;
 			theta_pre = theta;
 
@@ -166,10 +168,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			dx = (x - x_pre) / DT;
 			x_pre = x;
 
-			printf("Pos: %f, Theta: %f\n", x, theta);
+//			float frequency = exp(loop_counter / 100.0 * 0.05);
+//			float sin_theta = frequency * 2*PI * loop_counter / 100.0;
+//			float u = sinf(sin_theta);
 
-			MoveRightMotor(1.0);
-			MoveLeftMotor(1.0);
+			float u = loop_counter / 100.0 * 0.1;
+
+			MoveRightMotor(u);
+			MoveLeftMotor(u);
+
+			printf("%f, %f, %f\n", loop_counter / 100.0, u, x);
+
+//			printf("%f, %f\n", loop_counter / 100.0, theta);
+
+			loop_counter++;
 		}
 	}
 }
@@ -243,6 +255,7 @@ int main(void)
 				}
 				HAL_ADC_Stop(&hadc1);
 			}
+			HAL_Delay(3000);
 			start = true;
 		}
     /* USER CODE END WHILE */
@@ -320,7 +333,7 @@ static void MX_ADC1_Init(void)
   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
-  hadc1.Init.Resolution = ADC_RESOLUTION_10B;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
@@ -350,7 +363,7 @@ static void MX_ADC1_Init(void)
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
-  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_61CYCLES_5;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -507,9 +520,9 @@ static void MX_TIM6_Init(void)
 
   /* USER CODE END TIM6_Init 1 */
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 0;
+  htim6.Init.Prescaler = 15;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 63999;
+  htim6.Init.Period = 39999;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
