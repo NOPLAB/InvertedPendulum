@@ -27,7 +27,8 @@ public: // IAdcHandler
   ADC_HandleTypeDef *adcHandlerType() const override { return &hadc1; }
 
   void handleAdcInterrupt() override {
-    this->muxAdcValues[selectedChannel] = this->rawAdcValues[0];
+    uint8_t previousChannel = (selectedChannel == 0) ? (MUX_CHANNELS - 1) : (selectedChannel - 1);
+    this->muxAdcValues[previousChannel] = this->rawAdcValues[0];
     this->switchMuxChannel();
   }
 
@@ -38,9 +39,9 @@ public:
 
   void getCorrectedValues(Adc1CorrectedValues *values) {
     this->correctedValues.p_1 =
-        static_cast<float>(this->rawAdcValues[0]) / 4095.0f;
-    this->correctedValues.p_2 =
         static_cast<float>(this->rawAdcValues[1]) / 4095.0f;
+    this->correctedValues.p_2 =
+        static_cast<float>(this->rawAdcValues[2]) / 4095.0f;
 
     for (int i = 0; i < MUX_CHANNELS; i++) {
       this->correctedValues.mux_value[i] =
@@ -82,7 +83,7 @@ private:
   Adc2CorrectedValues correctedValues;
 
 public:
-  Adc2() {}
+  Adc2() { HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED); }
 
 public:
   ADC_HandleTypeDef *adcHandlerType() const override { return &hadc2; }
