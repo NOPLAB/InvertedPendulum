@@ -84,9 +84,7 @@ private:
   Adc2CorrectedValues correctedValues;
 
 public:
-  Adc2() {
-    // HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
-  }
+  Adc2() { HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED); }
 
 public:
   ADC_HandleTypeDef *adcHandlerType() const override { return &hadc2; }

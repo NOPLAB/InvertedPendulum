@@ -69,8 +69,8 @@ private:
 
   float zero_ad = 0.0f;
 
-  uint16_t testValueR = 0;
-  uint16_t testValueL = 0;
+  float offset_current_l = 0.0;
+  float offset_current_r = 0.0;
 
 public:
   QEI_HandleTypeDef encoderLeft;

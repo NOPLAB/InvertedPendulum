@@ -20,14 +20,14 @@ public:
     s = s < -1.0 ? -1.0 : s;
 
     if (s > 0) {
-      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, s * PRESCALER);
+      __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
+      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, s * PRESCALER);
     } else if (s < 0) {
-      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, -s * PRESCALER);
-      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+      __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, -s * PRESCALER);
+      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
     } else {
-      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+      __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
+      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
     }
   }
 
@@ -37,14 +37,14 @@ public:
     s = s < -1.0 ? -1.0 : s;
 
     if (s > 0) {
-      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
-      __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, s * PRESCALER);
+      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, s * PRESCALER);
     } else if (s < 0) {
-      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, -s * PRESCALER);
-      __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
+      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, -s * PRESCALER);
+      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
     } else {
-      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
-      __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
+      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
     }
   }
 };

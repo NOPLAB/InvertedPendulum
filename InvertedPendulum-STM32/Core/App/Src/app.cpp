@@ -12,6 +12,12 @@
 #include "stm32f3xx_hal_gpio.h"
 #include <stdio.h>
 
+#define AMPLIFICATION_FACTOR 150.0f
+#define SHUNT_REGISTER 0.010f
+float convertAdcToCurrent(float adcValue) {
+  return adcValue * 3.3f / AMPLIFICATION_FACTOR / SHUNT_REGISTER;
+}
+
 int App::run() {
   this->initialize();
 
@@ -46,30 +52,45 @@ void App::initialize() {
 }
 
 void App::loop() {
-  // HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-
-  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin,
-                    HAL_GPIO_ReadPin(SW_GPIO_Port, SW_Pin));
+  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 
   if (!start_control &&
       HAL_GPIO_ReadPin(SW_GPIO_Port, SW_Pin) == GPIO_PIN_RESET) {
     zero_ad = adc1->getCorrectedValues()->p_1;
+
+    offset_current_l = 0.0f;
+    offset_current_r = 0.0f;
+    for (int i = 0; i < 100; i++) {
+      float current_l = adc2->getCorrectedValues()->currentL;
+      float current_r = adc2->getCorrectedValues()->currentR;
+
+      // 移動平均
+      offset_current_l += current_l;
+      offset_current_r += current_r;
+
+      HAL_Delay(1);
+    }
+    offset_current_l /= 100.0f;
+    offset_current_r /= 100.0f;
+
+    // printf("offset current l: %f\n", offset_current_l);
+    // printf("offset current r: %f\n", offset_current_r);
+
     start_control = true;
   }
 
   // printf("L %d, R %d\n", encoderLeftValue, encoderRightValue);
   // printf("L %f, R %f\n", adc2->getCorrectedValues()->currentL,
-  //  adc2->getCorrectedValues()->currentR);
 
   HAL_Delay(100);
 }
 
 // ADC_TO_RAD = (333.3 * ((2.0*pi)/360.0)) / 4.85 * 3.3 / (2^12)
-#define ADV_TO_RAD 0.00096633
+#define ADV_TO_RAD 0.00096633f
 
 void App::interval() {
-  if (!initialized)
-    return;
+  adc1->scanAdcValues();
+  adc2->scanAdcValues();
 
   if (!start_control)
     return;
@@ -89,11 +110,13 @@ void App::interval() {
 
   float theta = -(float)(adc1_values->p_1 - zero_ad) * ADV_TO_RAD;
 
-  // motors->setSpeedLeft(1.0);
-  // motors->setSpeedRight(1.0);
+  float real_current_l =
+      convertAdcToCurrent(adc2_values->currentL - offset_current_l);
+  float real_current_r =
+      convertAdcToCurrent(adc2_values->currentR - offset_current_r);
+
+  motors->setSpeedLeft(1.0);
+  motors->setSpeedRight(1.0);
 
   // ADC1, 2の値のDMA読み取りを実施
-
-  adc1->scanAdcValues();
-  adc2->scanAdcValues();
 }
