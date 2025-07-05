@@ -8,7 +8,9 @@
 #include "app.hpp"
 #include "adc.hpp"
 #include "main.h"
+#include "qei.h"
 #include "stm32f3xx_hal_gpio.h"
+#include <stdio.h>
 
 int App::run() {
   this->initialize();
@@ -21,41 +23,77 @@ int App::run() {
 }
 
 void App::initialize() {
-  this->interval_caller = new Interval([]() { App::getInstance().interval(); });
+  this->intervalCaller = new Interval([]() { App::getInstance().interval(); });
   this->adc1 = new Adc1();
   this->adc2 = new Adc2();
   this->motors = new Motors();
 
+  QEI_Init(&this->encoderLeft, QEI_L_A_GPIO_Port, QEI_L_A_Pin,
+           QEI_L_B_GPIO_Port, QEI_L_B_Pin, 48, QEI_X4_ENCODING);
+  QEI_Init(&this->encoderRight, QEI_R_A_GPIO_Port, QEI_R_A_Pin,
+           QEI_R_B_GPIO_Port, QEI_R_B_Pin, 48, QEI_X4_ENCODING);
+
   this->adcInterruptHandlers[0] = this->adc1;
   this->adcInterruptHandlers[1] = this->adc2;
-  this->timerInterruptHandlers[0] = this->interval_caller;
+  this->timerInterruptHandlers[0] = this->intervalCaller;
 
   this->interruptHandler->registerAdc(this->adcInterruptHandlers,
                                       ADC_INTERRUPT_HANDLERS_NUM);
   this->interruptHandler->registerTimer(this->timerInterruptHandlers,
                                         TIMER_INTERRUPT_HANDLERS_NUM);
+
+  this->initialized = true;
 }
 
 void App::loop() {
-  HAL_Delay(100); // 100msの遅延
+  // HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 
-  motors->setSpeedLeft(1.0);
-  motors->setSpeedRight(1.0);
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin,
+                    HAL_GPIO_ReadPin(SW_GPIO_Port, SW_Pin));
+
+  if (!start_control &&
+      HAL_GPIO_ReadPin(SW_GPIO_Port, SW_Pin) == GPIO_PIN_RESET) {
+    zero_ad = adc1->getCorrectedValues()->p_1;
+    start_control = true;
+  }
+
+  // printf("L %d, R %d\n", encoderLeftValue, encoderRightValue);
+  // printf("L %f, R %f\n", adc2->getCorrectedValues()->currentL,
+  //  adc2->getCorrectedValues()->currentR);
+
+  HAL_Delay(100);
 }
 
+// ADC_TO_RAD = (333.3 * ((2.0*pi)/360.0)) / 4.85 * 3.3 / (2^12)
+#define ADV_TO_RAD 0.00096633
+
 void App::interval() {
-  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+  if (!initialized)
+    return;
+
+  if (!start_control)
+    return;
 
   // ADC1, 2の値取得
 
-  Adc1CorrectedValues adc1_values;
-  this->adc1->getCorrectedValues(&adc1_values);
+  Adc1CorrectedValues *adc1_values;
+  adc1_values = adc1->getCorrectedValues();
 
-  Adc2CorrectedValues adc2_values;
-  this->adc2->getCorrectedValues(&adc2_values);
+  Adc2CorrectedValues *adc2_values;
+  adc2_values = adc2->getCorrectedValues();
+
+  encoderLeftValue -= QEI_GetPulses(&encoderLeft);
+  QEI_Reset(&encoderLeft);
+  encoderRightValue += QEI_GetPulses(&encoderRight);
+  QEI_Reset(&encoderRight);
+
+  float theta = -(float)(adc1_values->p_1 - zero_ad) * ADV_TO_RAD;
+
+  // motors->setSpeedLeft(1.0);
+  // motors->setSpeedRight(1.0);
 
   // ADC1, 2の値のDMA読み取りを実施
 
-  this->adc1->scanAdcValues();
-  this->adc2->scanAdcValues();
+  adc1->scanAdcValues();
+  adc2->scanAdcValues();
 }

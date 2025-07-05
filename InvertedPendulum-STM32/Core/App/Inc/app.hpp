@@ -13,10 +13,17 @@
 #include "interval.hpp"
 #include "motor.hpp"
 
+extern "C" {
+#include "qei.h"
+}
+
 #define ADC_INTERRUPT_HANDLERS_NUM 2
 #define TIMER_INTERRUPT_HANDLERS_NUM 1
 
 class App {
+public:
+  bool initialized = false;
+
 public:
   App() {}
 
@@ -24,6 +31,8 @@ public:
     static App instance;
     return instance;
   }
+
+  static App *getInstanceRef() { return &getInstance(); }
 
   // アプリケーションを実行
   int run();
@@ -45,12 +54,27 @@ private:
   IAdcInterruptHandler *adcInterruptHandlers[ADC_INTERRUPT_HANDLERS_NUM];
   ITimerInterruptHandler *timerInterruptHandlers[TIMER_INTERRUPT_HANDLERS_NUM];
 
-  Interval *interval_caller = nullptr;
+  Interval *intervalCaller = nullptr;
 
   Adc1 *adc1 = nullptr;
   Adc2 *adc2 = nullptr;
 
   Motors *motors = nullptr;
+
+private:
+  int encoderLeftValue = 0;
+  int encoderRightValue = 0;
+
+  bool start_control = false;
+
+  float zero_ad = 0.0f;
+
+  uint16_t testValueR = 0;
+  uint16_t testValueL = 0;
+
+public:
+  QEI_HandleTypeDef encoderLeft;
+  QEI_HandleTypeDef encoderRight;
 };
 
 #endif /* APP_INC_APP_HPP_ */

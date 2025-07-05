@@ -27,7 +27,8 @@ public: // IAdcHandler
   ADC_HandleTypeDef *adcHandlerType() const override { return &hadc1; }
 
   void handleAdcInterrupt() override {
-    uint8_t previousChannel = (selectedChannel == 0) ? (MUX_CHANNELS - 1) : (selectedChannel - 1);
+    uint8_t previousChannel =
+        (selectedChannel == 0) ? (MUX_CHANNELS - 1) : (selectedChannel - 1);
     this->muxAdcValues[previousChannel] = this->rawAdcValues[0];
     this->switchMuxChannel();
   }
@@ -37,7 +38,7 @@ public:
     HAL_ADC_Start_DMA(&hadc1, (uint32_t *)this->rawAdcValues, ADC1_CHANNELS);
   }
 
-  void getCorrectedValues(Adc1CorrectedValues *values) {
+  Adc1CorrectedValues *getCorrectedValues() {
     this->correctedValues.p_1 =
         static_cast<float>(this->rawAdcValues[1]) / 4095.0f;
     this->correctedValues.p_2 =
@@ -48,7 +49,7 @@ public:
           static_cast<float>(this->muxAdcValues[i]) / 4095.0f;
     }
 
-    *values = this->correctedValues;
+    return &this->correctedValues;
   }
 
 private:
@@ -83,25 +84,26 @@ private:
   Adc2CorrectedValues correctedValues;
 
 public:
-  Adc2() { HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED); }
+  Adc2() {
+    // HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
+  }
 
 public:
   ADC_HandleTypeDef *adcHandlerType() const override { return &hadc2; }
 
-  void handleAdcInterrupt() override {
-    this->correctedValues.currentR =
-        static_cast<float>(this->rawAdcValues[0]) / 4095.0f;
-    this->correctedValues.currentL =
-        static_cast<float>(this->rawAdcValues[1]) / 4095.0f;
-  }
+  void handleAdcInterrupt() override {}
 
 public:
   void scanAdcValues() {
     HAL_ADC_Start_DMA(&hadc2, (uint32_t *)this->rawAdcValues, ADC2_CHANNELS);
   }
 
-  void getCorrectedValues(Adc2CorrectedValues *values) {
-    *values = this->correctedValues;
+  Adc2CorrectedValues *getCorrectedValues() {
+    this->correctedValues.currentR =
+        static_cast<float>(this->rawAdcValues[0]) / 4095.0f;
+    this->correctedValues.currentL =
+        static_cast<float>(this->rawAdcValues[1]) / 4095.0f;
+    return &this->correctedValues;
   };
 };
 

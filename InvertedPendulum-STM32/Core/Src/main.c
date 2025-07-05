@@ -26,6 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stdio.h"
 #include "app_wrapper.hpp"
 /* USER CODE END Includes */
 
@@ -58,7 +59,11 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+int _write(int file, char *ptr, int len)
+{
+  HAL_UART_Transmit(&huart2,(uint8_t *)ptr,len,10);
+  return len;
+}
 /* USER CODE END 0 */
 
 /**
@@ -69,7 +74,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  setbuf(stdout, NULL);
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
