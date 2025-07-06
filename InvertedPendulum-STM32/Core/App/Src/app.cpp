@@ -116,8 +116,8 @@ void App::interval() {
   encoder_val_r = current_encoder_r;
 
   // 車輪の位置
-  float real_x_r = (float)encoder_val_r * PULSE_TO_METER;
-  float real_x_l = (float)encoder_val_l * PULSE_TO_METER;
+  float real_x_r = (float)encoder_val_r * PULSE_TO_POSITION;
+  float real_x_l = (float)encoder_val_l * PULSE_TO_POSITION;
 
   float x = (real_x_r + real_x_l) / 2.0f;
   float dx = (x - prev_x) / DT;
@@ -173,9 +173,11 @@ void App::interval() {
   // printf(">current_avg:%f\n", current);
   // printf(">c:%f\n", current_filtered);
 
-  // float u = controller->step(x, theta, i) / vin;
+  float speed_u = pid_speed->update(1.0, dx) * SPEED_TO_CURRENT;
 
-  float u = pid_current->update(0.1, current_filtered) / vin;
+  // printf(">speed_u:%f\n", speed_u);
+
+  float u = pid_current->update(speed_u, current_filtered) / vin;
 
   // printf(">u:%f\n", u);
 

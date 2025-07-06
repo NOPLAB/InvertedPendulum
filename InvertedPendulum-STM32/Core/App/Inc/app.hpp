@@ -26,13 +26,19 @@ extern "C" {
 
 #define PI 3.14159265358979323846f
 #define DT (1.0f / 10000.0f)
+#define Kt 0.0186f // トルク定数 [Nm/A]
+#define KE 0.0186f // 逆起電力定数 [V*s/rad]
+#define LA 0.003f  // 電機子インダクタンス [H]
+#define RA 32.4f   // 電機子抵抗 [Ω]
 #define GEAR_RATIO 6.67f
 #define WHEEL_RADIUS 0.0255f
 #define PULSE_TO_RAD (2.0f * PI / (12.0f * 4.0f))
 // ADC_TO_RAD = (333.3 * ((2.0*pi)/360.0)) / 5.0 * 3.3
 #define ADV_TO_RAD 3.8393f
-#define PULSE_TO_METER (2.0f * PI * WHEEL_RADIUS) / (12.0f * 4.0f * GEAR_RATIO)
+#define PULSE_TO_POSITION                                                      \
+  (2.0f * PI * WHEEL_RADIUS) / (12.0f * 4.0f * GEAR_RATIO)
 #define ADC_TO_VOLTAGE ((2400.0f + 750.0f) / 750.0f)
+#define SPEED_TO_CURRENT (WHEEL_RADIUS / (2.0f * GEAR_RATIO * Kt))
 
 class App {
 public:
@@ -99,11 +105,12 @@ private:
   LowPassFilter *lpf_current = new LowPassFilter(1.0f, 1 / (2 * PI * 500), DT);
 
   PID *pid_current = new PID(0.928f, 10178.8f, 0.0f, DT, -12.0f, 12.0f);
-
   MotorCurrentObserver *current_observer_left =
-      new MotorCurrentObserver(0.0186f, 0.0186f, 0.003f, 32.4f, DT);
+      new MotorCurrentObserver(Kt, KE, LA, RA, DT);
   MotorCurrentObserver *current_observer_right =
-      new MotorCurrentObserver(0.0186f, 0.0186f, 0.003f, 32.4f, DT);
+      new MotorCurrentObserver(Kt, KE, LA, RA, DT);
+
+  PID *pid_speed = new PID(5.0654f, 22.2759f, 0.0f, DT, -10.0f, 10.0f);
 
   feedback_controller *controller = new feedback_controller();
 
