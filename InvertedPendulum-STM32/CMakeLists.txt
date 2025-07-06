@@ -50,7 +50,11 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/App/Src/app_wrapper.cpp
     Core/App/Src/app.cpp
+    Core/App/Src/pid.cpp
+    Core/App/Src/lpf.cpp
+    Core/App/Src/motor_observer.cpp
     Core/App/Lib/QEI/qei.c
+    COre/App/Lib/MATLAB/feedback_controller.cpp
 )
 
 # Add include paths
@@ -58,6 +62,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     Core/App/Inc
     Core/App/Lib/QEI
+    Core/App/Lib/MATLAB
 )
 
 # Add project symbols (macros)

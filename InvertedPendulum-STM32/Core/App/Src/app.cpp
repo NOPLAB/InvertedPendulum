@@ -7,6 +7,7 @@
 
 #include "app.hpp"
 #include "adc.hpp"
+#include "feedback_controller.h"
 #include "main.h"
 #include "qei.h"
 #include "stm32f3xx_hal_gpio.h"
@@ -76,17 +77,20 @@ void App::loop() {
     // printf("offset current l: %f\n", offset_current_l);
     // printf("offset current r: %f\n", offset_current_r);
 
+    pid_current->reset();
+    current_observer_left->reset();
+    current_observer_right->reset();
+
     start_control = true;
   }
 
   // printf("L %d, R %d\n", encoderLeftValue, encoderRightValue);
   // printf("L %f, R %f\n", adc2->getCorrectedValues()->currentL,
 
+  controller->initialize();
+
   HAL_Delay(100);
 }
-
-// ADC_TO_RAD = (333.3 * ((2.0*pi)/360.0)) / 4.85 * 3.3 / (2^12)
-#define ADV_TO_RAD 0.00096633f
 
 void App::interval() {
   adc1->scanAdcValues();
@@ -103,20 +107,86 @@ void App::interval() {
   Adc2CorrectedValues *adc2_values;
   adc2_values = adc2->getCorrectedValues();
 
-  encoderLeftValue -= QEI_GetPulses(&encoderLeft);
+  int current_encoder_l = encoder_val_l - QEI_GetPulses(&encoderLeft);
   QEI_Reset(&encoderLeft);
-  encoderRightValue += QEI_GetPulses(&encoderRight);
+  int current_encoder_r = encoder_val_r + QEI_GetPulses(&encoderRight);
   QEI_Reset(&encoderRight);
 
-  float theta = -(float)(adc1_values->p_1 - zero_ad) * ADV_TO_RAD;
+  encoder_val_l = current_encoder_l;
+  encoder_val_r = current_encoder_r;
 
-  float real_current_l =
+  // 車輪の位置
+  float real_x_r = (float)encoder_val_r * PULSE_TO_METER;
+  float real_x_l = (float)encoder_val_l * PULSE_TO_METER;
+
+  float x = (real_x_r + real_x_l) / 2.0f;
+  float dx = (x - prev_x) / DT;
+  prev_x = x;
+
+  // モーター軸の角速度を計算 [rad/s]（オブザーバー用）
+  // エンコーダーはモーター軸に直接取り付けられているため、直接変換
+  float motor_speed_left =
+      (float)(current_encoder_l - prev_encoder_l) * PULSE_TO_RAD / DT;
+  float motor_speed_right =
+      (float)(current_encoder_r - prev_encoder_r) * PULSE_TO_RAD / DT;
+
+  prev_encoder_l = current_encoder_l;
+  prev_encoder_r = current_encoder_r;
+
+  // printf(">x:%f\n", x);
+
+  float theta = -(float)(adc1_values->p_1 - zero_ad) * ADV_TO_RAD;
+  float dtheta = (theta - prev_theta) / DT;
+  prev_theta = theta;
+
+  // printf(">theta:%f\n", theta);
+
+  // 電圧指令値を計算（PWM値から実際の電圧に変換）
+  float vin = adc1_values->mux_value[4] * 3.3 * ADC_TO_VOLTAGE;
+
+  // printf(">vin:%f\n", vin);
+
+  float voltage_left = current_pwm_left * vin;
+  float voltage_right = current_pwm_right * vin;
+
+  // 測定電流値を取得
+  float measured_current_l =
       convertAdcToCurrent(adc2_values->currentL - offset_current_l);
-  float real_current_r =
+  float measured_current_r =
       convertAdcToCurrent(adc2_values->currentR - offset_current_r);
 
-  motors->setSpeedLeft(1.0);
-  motors->setSpeedRight(1.0);
+  // printf(">measured_l:%f\n", measured_current_l);
+  // printf(">measured_r:%f\n", measured_current_r);
+
+  // オブザーバーを使用して正しい電流値を取得
+  float corrected_current_l = current_observer_left->getCorrectedCurrent(
+      measured_current_l, voltage_left, motor_speed_left);
+  float corrected_current_r = current_observer_right->getCorrectedCurrent(
+      measured_current_r, voltage_right, motor_speed_right);
+
+  // printf(">corrected_l:%f\n", corrected_current_l);
+  // printf(">corrected_r:%f\n", corrected_current_r);
+
+  float current = (corrected_current_l + corrected_current_r) / 2.0f;
+  float current_filtered = lpf_current->update(current);
+
+  // printf(">current_avg:%f\n", current);
+  // printf(">c:%f\n", current_filtered);
+
+  // float u = controller->step(x, theta, i) / vin;
+
+  float u = pid_current->update(0.1, current_filtered) / vin;
+
+  // printf(">u:%f\n", u);
+
+  motors->setSpeedLeft(u);
+  motors->setSpeedRight(u);
+
+  // PWM指令値を保存（次回のオブザーバーで使用）
+  current_pwm_left = u;
+  current_pwm_right = u;
+
+  prev_u = u;
 
   // ADC1, 2の値のDMA読み取りを実施
 }
