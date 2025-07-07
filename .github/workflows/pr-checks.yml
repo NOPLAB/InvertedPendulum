@@ -1,0 +1,166 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-format:
+    name: Code Formatting & Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install clang-format
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format
+    
+    - name: Check code formatting
+      working-directory: InvertedPendulum-STM32
+      run: |
+        echo "Checking code formatting..."
+        
+        # Find all C++ files and check formatting
+        FAILED_FILES=""
+        for file in $(find Core/App -name "*.cpp" -o -name "*.hpp"); do
+          if ! clang-format --dry-run --Werror "$file" 2>/dev/null; then
+            FAILED_FILES="$FAILED_FILES $file"
+          fi
+        done
+        
+        if [ ! -z "$FAILED_FILES" ]; then
+          echo "❌ The following files are not properly formatted:"
+          for file in $FAILED_FILES; do
+            echo "  - $file"
+          done
+          echo ""
+          echo "Please run 'clang-format -i' on these files to fix formatting."
+          exit 1
+        else
+          echo "✅ All files are properly formatted!"
+        fi
+
+  fast-tests:
+    name: Fast TDD Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential
+    
+    - name: Build and test
+      working-directory: InvertedPendulum-STM32
+      run: |
+        # Use the automated build script
+        chmod +x build_pc.sh
+        ./build_pc.sh
+        
+        # Check exit code
+        if [ $? -eq 0 ]; then
+          echo "✅ All tests passed in PR check!"
+        else
+          echo "❌ Tests failed in PR check!"
+          exit 1
+        fi
+
+  diff-analysis:
+    name: PR Diff Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Analyze changes
+      run: |
+        echo "## PR Changes Analysis" > pr_analysis.md
+        echo "" >> pr_analysis.md
+        
+        # Get changed files
+        CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+        
+        echo "### Changed Files:" >> pr_analysis.md
+        for file in $CHANGED_FILES; do
+          echo "- \`$file\`" >> pr_analysis.md
+        done
+        echo "" >> pr_analysis.md
+        
+        # Check if tests were added for new code
+        NEW_CPP_FILES=$(echo "$CHANGED_FILES" | grep -E "\.cpp$|\.hpp$" | grep -v -E "Test|test" || true)
+        NEW_TEST_FILES=$(echo "$CHANGED_FILES" | grep -E "Test|test" | grep -E "\.cpp$|\.hpp$" || true)
+        
+        if [ ! -z "$NEW_CPP_FILES" ] && [ -z "$NEW_TEST_FILES" ]; then
+          echo "### ⚠️ Warning:" >> pr_analysis.md
+          echo "New code was added but no new tests were found." >> pr_analysis.md
+          echo "Consider adding tests following TDD principles." >> pr_analysis.md
+          echo "" >> pr_analysis.md
+        fi
+        
+        # Check lines of code changes
+        ADDED_LINES=$(git diff --numstat origin/main...HEAD | awk '{sum+=$1} END {print sum}')
+        REMOVED_LINES=$(git diff --numstat origin/main...HEAD | awk '{sum+=$2} END {print sum}')
+        
+        echo "### Code Statistics:" >> pr_analysis.md
+        echo "- Lines added: $ADDED_LINES" >> pr_analysis.md
+        echo "- Lines removed: $REMOVED_LINES" >> pr_analysis.md
+        echo "" >> pr_analysis.md
+        
+        # Display the analysis
+        cat pr_analysis.md
+    
+    - name: Comment PR
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const analysis = fs.readFileSync('pr_analysis.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: analysis
+          });
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Run security scan
+      run: |
+        echo "Running basic security checks..."
+        
+        # Check for potential security issues in code
+        SECURITY_ISSUES=""
+        
+        # Check for hardcoded secrets
+        if grep -r -E "(password|secret|key|token)" InvertedPendulum-STM32/Core/App/ --include="*.cpp" --include="*.hpp" | grep -v -E "(test|Test|mock)" ; then
+          SECURITY_ISSUES="$SECURITY_ISSUES\n- Potential hardcoded secrets found"
+        fi
+        
+        # Check for unsafe functions
+        if grep -r -E "(strcpy|strcat|sprintf|gets)" InvertedPendulum-STM32/Core/App/ --include="*.cpp" --include="*.hpp" ; then
+          SECURITY_ISSUES="$SECURITY_ISSUES\n- Unsafe string functions found"
+        fi
+        
+        if [ ! -z "$SECURITY_ISSUES" ]; then
+          echo "❌ Security issues found:"
+          echo -e "$SECURITY_ISSUES"
+          exit 1
+        else
+          echo "✅ No obvious security issues found!"
+        fi

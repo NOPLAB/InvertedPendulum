@@ -1,0 +1,253 @@
+name: TDD CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: TDD Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+        build_type: [Debug, Release]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential
+        
+        # Install Clang if needed
+        if [ "${{ matrix.compiler }}" = "clang" ]; then
+          sudo apt-get install -y clang
+        fi
+    
+    - name: Set compiler environment
+      run: |
+        if [ "${{ matrix.compiler }}" = "clang" ]; then
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+        else
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+        fi
+    
+    - name: Configure CMake (PC Build)
+      working-directory: InvertedPendulum-STM32
+      run: |
+        mkdir -p build_ci
+        cd build_ci
+        cp ../CMakeLists_PC.txt CMakeLists.txt
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+              -DCMAKE_C_COMPILER=$CC \
+              -DCMAKE_CXX_COMPILER=$CXX \
+              .
+    
+    - name: Build tests
+      working-directory: InvertedPendulum-STM32/build_ci
+      run: |
+        make -j$(nproc)
+    
+    - name: Run TDD tests
+      working-directory: InvertedPendulum-STM32/build_ci
+      run: |
+        # Run tests and capture output
+        ./InvertedPendulum-PC-Tests > test_output.txt 2>&1
+        TEST_EXIT_CODE=$?
+        
+        # Display test output
+        cat test_output.txt
+        
+        # Check if all tests passed
+        if [ $TEST_EXIT_CODE -eq 0 ]; then
+          echo "✅ All tests passed!"
+        else
+          echo "❌ Some tests failed!"
+          exit 1
+        fi
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.compiler }}-${{ matrix.build_type }}
+        path: InvertedPendulum-STM32/build_ci/test_output.txt
+
+  arm-build:
+    name: ARM Cross-compilation Build
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install ARM toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi cmake ninja-build
+    
+    - name: Configure STM32 build
+      working-directory: InvertedPendulum-STM32
+      run: |
+        cmake -G Ninja -S . -B build_arm \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_TOOLCHAIN_FILE=cmake/gcc-arm-none-eabi.cmake
+    
+    - name: Build STM32 firmware
+      working-directory: InvertedPendulum-STM32
+      run: |
+        cmake --build build_arm
+    
+    - name: Check firmware size
+      working-directory: InvertedPendulum-STM32/build_arm
+      run: |
+        arm-none-eabi-size InvertedPendulum-STM32.elf
+    
+    - name: Upload firmware artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: stm32-firmware
+        path: |
+          InvertedPendulum-STM32/build_arm/InvertedPendulum-STM32.elf
+          InvertedPendulum-STM32/build_arm/InvertedPendulum-STM32.map
+
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential gcov lcov
+    
+    - name: Build with coverage
+      working-directory: InvertedPendulum-STM32
+      run: |
+        mkdir -p build_coverage
+        cd build_coverage
+        cp ../CMakeLists_PC.txt CMakeLists.txt
+        cmake -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+              -DCMAKE_C_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+              .
+        make -j$(nproc)
+    
+    - name: Run tests for coverage
+      working-directory: InvertedPendulum-STM32/build_coverage
+      run: |
+        ./InvertedPendulum-PC-Tests
+    
+    - name: Generate coverage report
+      working-directory: InvertedPendulum-STM32/build_coverage
+      run: |
+        # Create coverage info
+        lcov --capture --directory . --output-file coverage.info
+        
+        # Filter out system and test files
+        lcov --remove coverage.info '/usr/*' '*Test*' '*test*' '*mock*' --output-file coverage.info
+        
+        # Generate HTML report
+        genhtml coverage.info --output-directory coverage_html
+    
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: InvertedPendulum-STM32/build_coverage/coverage_html/
+
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install clang-format and cppcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format cppcheck
+    
+    - name: Check code formatting
+      working-directory: InvertedPendulum-STM32
+      run: |
+        # Check if code follows the formatting rules
+        find Core/App -name "*.cpp" -o -name "*.hpp" | xargs clang-format --dry-run --Werror
+    
+    - name: Run static analysis
+      working-directory: InvertedPendulum-STM32
+      run: |
+        # Run cppcheck on source files
+        cppcheck --enable=all --inconclusive --xml --xml-version=2 \
+          Core/App/Src/ Core/App/Inc/ 2> cppcheck_report.xml || true
+    
+    - name: Upload analysis results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: static-analysis
+        path: InvertedPendulum-STM32/cppcheck_report.xml
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [test, arm-build, coverage, quality]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+    
+    - name: Create release tag
+      id: tag
+      run: |
+        # Generate tag based on current date and commit
+        TAG="v$(date +'%Y%m%d')-$(git rev-parse --short HEAD)"
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        git tag $TAG
+        git push origin $TAG
+    
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag.outputs.tag }}
+        release_name: TDD Release ${{ steps.tag.outputs.tag }}
+        body: |
+          ## TDD Release
+          
+          This release includes:
+          - STM32 firmware with TDD-verified control algorithms
+          - Complete test suite with 100% pass rate
+          - Cross-compilation support for PC testing
+          - Code coverage and quality analysis
+          
+          ### Test Results
+          All tests passed on multiple compiler configurations.
+          
+          ### Artifacts
+          - `stm32-firmware/`: STM32 firmware binary and map files
+          - `coverage-report/`: Test coverage analysis
+          - `test-results-*/`: Detailed test outputs
+        draft: false
+        prerelease: false
