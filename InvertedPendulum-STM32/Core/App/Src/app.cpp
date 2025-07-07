@@ -6,12 +6,14 @@
  */
 
 #include "app.hpp"
+
+#include <stdio.h>
+
 #include "adc.hpp"
 #include "feedback_controller.h"
 #include "main.h"
 #include "qei.h"
 #include "stm32f3xx_hal_gpio.h"
-#include <stdio.h>
 
 #define AMPLIFICATION_FACTOR 150.0f
 #define SHUNT_REGISTER 0.010f
@@ -101,8 +103,7 @@ void App::interval() {
   adc1->scanAdcValues();
   adc2->scanAdcValues();
 
-  if (!start_control)
-    return;
+  if (!start_control) return;
 
   // ADC1, 2の値取得
 

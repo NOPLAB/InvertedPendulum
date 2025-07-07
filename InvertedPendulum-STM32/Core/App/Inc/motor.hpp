@@ -2,10 +2,10 @@
 
 #include "tim.h"
 
-#define PRESCALER (3199 - 1) // 20kHz
+#define PRESCALER (3199 - 1)  // 20kHz
 
 class Motors {
-public:
+ public:
   Motors() {
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
@@ -44,7 +44,7 @@ public:
     }
   }
 
-private:
+ private:
   float clamp(float value, float min_val, float max_val) {
     if (value > max_val) return max_val;
     if (value < min_val) return min_val;

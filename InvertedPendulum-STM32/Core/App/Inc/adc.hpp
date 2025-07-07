@@ -14,16 +14,16 @@ struct Adc1CorrectedValues {
 };
 
 class Adc1 : public IAdcInterruptHandler {
-private:
+ private:
   uint8_t selectedChannel = 0;
   uint16_t rawAdcValues[ADC1_CHANNELS] = {0};
   uint16_t muxAdcValues[MUX_CHANNELS] = {0};
   Adc1CorrectedValues correctedValues;
 
-public:
+ public:
   Adc1() { HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED); }
 
-public: // IAdcHandler
+ public:  // IAdcHandler
   ADC_HandleTypeDef *adcHandlerType() const override { return &hadc1; }
 
   void handleAdcInterrupt() override {
@@ -33,7 +33,7 @@ public: // IAdcHandler
     this->switchMuxChannel();
   }
 
-public:
+ public:
   void scanAdcValues() {
     HAL_ADC_Start_DMA(&hadc1, (uint32_t *)this->rawAdcValues, ADC1_CHANNELS);
   }
@@ -52,17 +52,17 @@ public:
     return &this->correctedValues;
   }
 
-private:
+ private:
   void switchMuxChannel() {
-    HAL_GPIO_WritePin(Mux_A_GPIO_Port, Mux_A_Pin,
-                      (this->selectedChannel & 0x01) ? GPIO_PIN_SET
-                                                     : GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(Mux_B_GPIO_Port, Mux_B_Pin,
-                      (this->selectedChannel & 0x02) ? GPIO_PIN_SET
-                                                     : GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(Mux_C_GPIO_Port, Mux_C_Pin,
-                      (this->selectedChannel & 0x04) ? GPIO_PIN_SET
-                                                     : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(
+        Mux_A_GPIO_Port, Mux_A_Pin,
+        (this->selectedChannel & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(
+        Mux_B_GPIO_Port, Mux_B_Pin,
+        (this->selectedChannel & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(
+        Mux_C_GPIO_Port, Mux_C_Pin,
+        (this->selectedChannel & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 
     this->selectedChannel++;
     if (this->selectedChannel >= MUX_CHANNELS) {
@@ -79,19 +79,19 @@ struct Adc2CorrectedValues {
 };
 
 class Adc2 : public IAdcInterruptHandler {
-private:
+ private:
   uint16_t rawAdcValues[ADC2_CHANNELS] = {0};
   Adc2CorrectedValues correctedValues;
 
-public:
+ public:
   Adc2() { HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED); }
 
-public:
+ public:
   ADC_HandleTypeDef *adcHandlerType() const override { return &hadc2; }
 
   void handleAdcInterrupt() override {}
 
-public:
+ public:
   void scanAdcValues() {
     HAL_ADC_Start_DMA(&hadc2, (uint32_t *)this->rawAdcValues, ADC2_CHANNELS);
   }

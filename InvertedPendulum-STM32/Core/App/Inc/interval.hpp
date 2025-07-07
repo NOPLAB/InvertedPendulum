@@ -4,16 +4,16 @@
 #include "tim.h"
 
 class Interval : public ITimerInterruptHandler {
-private:
+ private:
   void (*callback)() = nullptr;
 
-public:
+ public:
   Interval(void (*callback)()) {
     this->callback = callback;
     HAL_TIM_Base_Start_IT(&htim6);
   }
 
-public: // ITimerInterruptHandler
+ public:  // ITimerInterruptHandler
   TIM_HandleTypeDef *timerHandlerType() const override { return &htim6; }
 
   void handleTimerInterrupt() override {

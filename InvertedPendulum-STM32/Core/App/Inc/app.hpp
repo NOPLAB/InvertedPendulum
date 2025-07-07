@@ -26,26 +26,26 @@ extern "C" {
 
 #define PI 3.14159265358979323846f
 #define DT (1.0f / 10000.0f)
-#define Kt 0.0186f           // トルク定数 [Nm/A]
-#define KE 0.0186f           // 逆起電力定数 [V*s/rad]
-#define LA 0.003f            // 電機子インダクタンス [H]
-#define RA 32.4f             // 電機子抵抗 [Ω]
-#define GEAR_RATIO 6.67f     // ギア比
-#define WHEEL_RADIUS 0.0255f // 車輪半径 [m]
-#define Bx 2.2276f           // 摩擦係数
+#define Kt 0.0186f            // トルク定数 [Nm/A]
+#define KE 0.0186f            // 逆起電力定数 [V*s/rad]
+#define LA 0.003f             // 電機子インダクタンス [H]
+#define RA 32.4f              // 電機子抵抗 [Ω]
+#define GEAR_RATIO 6.67f      // ギア比
+#define WHEEL_RADIUS 0.0255f  // 車輪半径 [m]
+#define Bx 2.2276f            // 摩擦係数
 #define PULSE_TO_RAD (2.0f * PI / (12.0f * 4.0f))
 // ADC_TO_RAD = (333.3 * ((2.0*pi)/360.0)) / 5.0 * 3.3
 #define ADV_TO_RAD 3.8393f
-#define PULSE_TO_POSITION                                                      \
+#define PULSE_TO_POSITION \
   (2.0f * PI * WHEEL_RADIUS) / (12.0f * 4.0f * GEAR_RATIO)
 #define ADC_TO_VOLTAGE ((2400.0f + 750.0f) / 750.0f)
 #define SPEED_TO_CURRENT (WHEEL_RADIUS / (2.0f * GEAR_RATIO * Kt))
 
 class App {
-public:
+ public:
   bool initialized = false;
 
-public:
+ public:
   App() {}
 
   static App &getInstance() {
@@ -67,10 +67,10 @@ public:
   // 一定時間ごとに呼ばれる
   void interval();
 
-public:
+ public:
   InterruptHandler *getInterruptHandler() { return this->interruptHandler; }
 
-private:
+ private:
   InterruptHandler *interruptHandler = new InterruptHandler();
   IAdcInterruptHandler *adcInterruptHandlers[ADC_INTERRUPT_HANDLERS_NUM];
   ITimerInterruptHandler *timerInterruptHandlers[TIMER_INTERRUPT_HANDLERS_NUM];
@@ -82,7 +82,7 @@ private:
 
   Motors *motors = nullptr;
 
-private:
+ private:
   int encoder_val_l = 0;
   int encoder_val_r = 0;
 
@@ -118,7 +118,7 @@ private:
 
   feedback_controller *controller = new feedback_controller();
 
-public:
+ public:
   QEI_HandleTypeDef encoderLeft;
   QEI_HandleTypeDef encoderRight;
 };

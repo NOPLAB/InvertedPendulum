@@ -2,9 +2,16 @@
 
 PID::PID(float kp, float ki, float kd, float dt, float min_output,
          float max_output)
-    : kp_(kp), ki_(ki), kd_(kd), dt_(dt), min_output_(min_output),
-      max_output_(max_output), integral_term_(0.0f), derivative_term_(0.0f),
-      prev_error_(0.0f), first_call_(true) {}
+    : kp_(kp),
+      ki_(ki),
+      kd_(kd),
+      dt_(dt),
+      min_output_(min_output),
+      max_output_(max_output),
+      integral_term_(0.0f),
+      derivative_term_(0.0f),
+      prev_error_(0.0f),
+      first_call_(true) {}
 
 void PID::setGains(float kp, float ki, float kd) {
   kp_ = kp;
@@ -64,9 +71,7 @@ float PID::update(float setpoint, float measurement) {
 }
 
 float PID::clamp(float value, float min_val, float max_val) {
-  if (value > max_val)
-    return max_val;
-  if (value < min_val)
-    return min_val;
+  if (value > max_val) return max_val;
+  if (value < min_val) return min_val;
   return value;
 }

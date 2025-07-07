@@ -2,7 +2,7 @@
 #define APP_INC_PID_HPP_
 
 class PID {
-public:
+ public:
   PID(float kp, float ki, float kd, float dt, float min_output = -1.0f,
       float max_output = 1.0f);
 
@@ -19,7 +19,7 @@ public:
   float getIntegralTerm() const { return integral_term_; }
   float getDerivativeTerm() const { return derivative_term_; }
 
-private:
+ private:
   float kp_, ki_, kd_;
   float dt_;
   float min_output_, max_output_;

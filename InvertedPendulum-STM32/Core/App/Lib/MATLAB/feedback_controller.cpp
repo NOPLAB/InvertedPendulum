@@ -19,29 +19,29 @@
 // Validation result: Not run
 //
 #include "feedback_controller.h"
-#include "rtwtypes.h"
+
 #include <cmath>
-#include "limits"
+
 #include "cmath"
+#include "limits"
+#include "rtwtypes.h"
 
-extern "C"
-{
-  real_T rtNaN { -std::numeric_limits<real_T>::quiet_NaN() };
+extern "C" {
+real_T rtNaN{-std::numeric_limits<real_T>::quiet_NaN()};
 
-  real_T rtInf { std::numeric_limits<real_T>::infinity() };
+real_T rtInf{std::numeric_limits<real_T>::infinity()};
 
-  real_T rtMinusInf { -std::numeric_limits<real_T>::infinity() };
+real_T rtMinusInf{-std::numeric_limits<real_T>::infinity()};
 
-  real32_T rtNaNF { -std::numeric_limits<real32_T>::quiet_NaN() };
+real32_T rtNaNF{-std::numeric_limits<real32_T>::quiet_NaN()};
 
-  real32_T rtInfF { std::numeric_limits<real32_T>::infinity() };
+real32_T rtInfF{std::numeric_limits<real32_T>::infinity()};
 
-  real32_T rtMinusInfF { -std::numeric_limits<real32_T>::infinity() };
+real32_T rtMinusInfF{-std::numeric_limits<real32_T>::infinity()};
 }
 
 // Model step function
-real_T feedback_controller::step(real_T arg_x, real_T arg_theta, real_T arg_i)
-{
+real_T feedback_controller::step(real_T arg_x, real_T arg_theta, real_T arg_i) {
   real_T rtb_Integrator;
   real_T rtb_Integrator_d4;
   real_T rtb_Max;
@@ -125,9 +125,11 @@ real_T feedback_controller::step(real_T arg_x, real_T arg_theta, real_T arg_i)
   //
   //   Store in Global RAM
 
-  rtb_Sum_n = (((3.1623 * rtDW.Integrator_DSTATE + 7.4739 * rtb_Sum_n) + 40.598 *
-                rtDW.Integrator_DSTATE_m) + (rtDW.Integrator_DSTATE_m -
-    rtDW.UD_DSTATE_e) * 8.5943) * 0.44891548943449222 - rtb_Sum_n;
+  rtb_Sum_n = (((3.1623 * rtDW.Integrator_DSTATE + 7.4739 * rtb_Sum_n) +
+                40.598 * rtDW.Integrator_DSTATE_m) +
+               (rtDW.Integrator_DSTATE_m - rtDW.UD_DSTATE_e) * 8.5943) *
+                  0.44891548943449222 -
+              rtb_Sum_n;
 
   // Sum: '<Root>/Sum1' incorporates:
   //   DiscreteIntegrator: '<S55>/Integrator'
@@ -136,8 +138,9 @@ real_T feedback_controller::step(real_T arg_x, real_T arg_theta, real_T arg_i)
   //   Inport: '<Root>/i'
   //   Sum: '<S64>/Sum'
 
-  rtb_Max = (5.0654 * rtb_Sum_n + rtDW.Integrator_DSTATE_h) *
-    0.10299899133693659 - arg_i;
+  rtb_Max =
+      (5.0654 * rtb_Sum_n + rtDW.Integrator_DSTATE_h) * 0.10299899133693659 -
+      arg_i;
 
   // Outport: '<Root>/y' incorporates:
   //   DiscreteIntegrator: '<S107>/Integrator'
@@ -154,8 +157,9 @@ real_T feedback_controller::step(real_T arg_x, real_T arg_theta, real_T arg_i)
   //   Sum: '<S4>/Sum1'
 
   rtDW.Integrator_IC_LOADING = 0U;
-  rtDW.Integrator_DSTATE += 1.0 / std::fmax(rtDW.Probe[0], 0.0015915494309189533)
-    * (arg_x - rtDW.Integrator_DSTATE) * 0.002;
+  rtDW.Integrator_DSTATE += 1.0 /
+                            std::fmax(rtDW.Probe[0], 0.0015915494309189533) *
+                            (arg_x - rtDW.Integrator_DSTATE) * 0.002;
   rtDW.Integrator_PrevResetState = static_cast<int8_T>(rtb_LogicalOperator);
 
   // Update for UnitDelay: '<S1>/UD'
@@ -174,8 +178,9 @@ real_T feedback_controller::step(real_T arg_x, real_T arg_theta, real_T arg_i)
   //   Sum: '<S3>/Sum1'
 
   rtDW.Integrator_IC_LOADING_b = 0U;
-  rtDW.Integrator_DSTATE_m += 1.0 / std::fmax(rtDW.Probe_n[0],
-    0.00015915494309189535) * (arg_theta - rtDW.Integrator_DSTATE_m) * 0.002;
+  rtDW.Integrator_DSTATE_m +=
+      1.0 / std::fmax(rtDW.Probe_n[0], 0.00015915494309189535) *
+      (arg_theta - rtDW.Integrator_DSTATE_m) * 0.002;
   rtDW.Integrator_PrevResetState_c = static_cast<int8_T>(rtb_LogicalOperator_f);
 
   // Update for UnitDelay: '<S2>/UD'
@@ -199,8 +204,7 @@ real_T feedback_controller::step(real_T arg_x, real_T arg_theta, real_T arg_i)
 }
 
 // Model initialize function
-void feedback_controller::initialize()
-{
+void feedback_controller::initialize() {
   // Start for Probe: '<S14>/Probe'
   rtDW.Probe[0] = 0.002;
   rtDW.Probe[1] = 0.0;
@@ -217,40 +221,25 @@ void feedback_controller::initialize()
 }
 
 // Constructor
-feedback_controller::feedback_controller():
-  rtDW()
-{
+feedback_controller::feedback_controller() : rtDW() {
   // Currently there is no constructor body generated.
 }
 
 // Destructor
 // Currently there is no destructor body generated.
 feedback_controller::~feedback_controller() = default;
-extern "C"
-{
-  // Test if value is infinite
-  static boolean_T rtIsInf(real_T value)
-  {
-    return std::isinf(value);
-  }
+extern "C" {
+// Test if value is infinite
+static boolean_T rtIsInf(real_T value) { return std::isinf(value); }
 
-  // Test if single-precision value is infinite
-  static boolean_T rtIsInfF(real32_T value)
-  {
-    return std::isinf(value);
-  }
+// Test if single-precision value is infinite
+static boolean_T rtIsInfF(real32_T value) { return std::isinf(value); }
 
-  // Test if value is not a number
-  static boolean_T rtIsNaN(real_T value)
-  {
-    return std::isnan(value);
-  }
+// Test if value is not a number
+static boolean_T rtIsNaN(real_T value) { return std::isnan(value); }
 
-  // Test if single-precision value is not a number
-  static boolean_T rtIsNaNF(real32_T value)
-  {
-    return std::isnan(value);
-  }
+// Test if single-precision value is not a number
+static boolean_T rtIsNaNF(real32_T value) { return std::isnan(value); }
 }
 
 //
