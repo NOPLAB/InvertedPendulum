@@ -77,9 +77,14 @@ void App::loop() {
     // printf("offset current l: %f\n", offset_current_l);
     // printf("offset current r: %f\n", offset_current_r);
 
-    pid_current->reset();
+    lpf_theta->reset();
+    lpf_current->reset();
+
     current_observer_left->reset();
     current_observer_right->reset();
+
+    pid_current->reset();
+    pid_speed->reset();
 
     start_control = true;
   }
@@ -136,10 +141,11 @@ void App::interval() {
   // printf(">x:%f\n", x);
 
   float theta = -(float)(adc1_values->p_1 - zero_ad) * ADV_TO_RAD;
-  float dtheta = (theta - prev_theta) / DT;
-  prev_theta = theta;
+  float theta_filtered = lpf_theta->update(theta);
+  float dtheta = (theta_filtered - prev_theta) / DT;
+  prev_theta = theta_filtered;
 
-  // printf(">theta:%f\n", theta);
+  // printf(">theta:%f\n", theta_filtered);
 
   // 電圧指令値を計算（PWM値から実際の電圧に変換）
   float vin = adc1_values->mux_value[4] * 3.3 * ADC_TO_VOLTAGE;
@@ -173,11 +179,17 @@ void App::interval() {
   // printf(">current_avg:%f\n", current);
   // printf(">c:%f\n", current_filtered);
 
-  float speed_u = pid_speed->update(1.0, dx) * SPEED_TO_CURRENT;
+  // [-3.1623, -8.4042, -58.4769, -11.7355]
+  float state_feedback_u =
+      x * -3.1623f + dx * -8.4042f + theta * -58.4769f + dtheta * -11.7355f;
 
-  // printf(">speed_u:%f\n", speed_u);
+  // 力から直接電流指令に変換
+  float force_to_current =
+      -state_feedback_u * (WHEEL_RADIUS / (GEAR_RATIO * Kt));
 
-  float u = pid_current->update(speed_u, current_filtered) / vin;
+  // printf(">force_to_current:%f\n", force_to_current);
+
+  float u = pid_current->update(force_to_current, current_filtered) / vin;
 
   // printf(">u:%f\n", u);
 
