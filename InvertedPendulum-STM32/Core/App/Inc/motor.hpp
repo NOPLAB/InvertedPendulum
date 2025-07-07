@@ -15,9 +15,7 @@ public:
   }
 
   void setSpeedLeft(const float v) {
-    float s = v;
-    s = s > 1.0 ? 1.0 : s;
-    s = s < -1.0 ? -1.0 : s;
+    float s = clamp(v, -1.0f, 1.0f);
 
     if (s > 0) {
       __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
@@ -32,9 +30,7 @@ public:
   }
 
   void setSpeedRight(const float v) {
-    float s = v;
-    s = s > 1.0 ? 1.0 : s;
-    s = s < -1.0 ? -1.0 : s;
+    float s = clamp(v, -1.0f, 1.0f);
 
     if (s > 0) {
       __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
@@ -46,5 +42,12 @@ public:
       __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
       __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
     }
+  }
+
+private:
+  float clamp(float value, float min_val, float max_val) {
+    if (value > max_val) return max_val;
+    if (value < min_val) return min_val;
+    return value;
   }
 };

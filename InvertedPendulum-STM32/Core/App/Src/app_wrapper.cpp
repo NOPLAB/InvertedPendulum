@@ -2,9 +2,20 @@
 #include "app.hpp"
 #include "main.h"
 
+#ifdef ENABLE_TESTING
+extern "C" void run_tdd_tests();
+#endif
+
 App *AppInstance = App::getInstanceRef();
 
-void AppRun(void) { App::getInstance().run(); }
+void AppRun(void) { 
+#ifdef ENABLE_TESTING
+  // In test mode, run tests instead of normal application
+  run_tdd_tests();
+#else
+  App::getInstance().run(); 
+#endif
+}
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
   if (!App::getInstance().initialized)

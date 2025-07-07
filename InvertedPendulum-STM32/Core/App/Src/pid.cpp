@@ -50,10 +50,12 @@ float PID::update(float setpoint, float measurement) {
   output = clamp(output, min_output_, max_output_);
 
   // Anti-windup: prevent integral windup by clamping integral term
-  if (output == max_output_ && integral_term_ > 0.0f) {
+  if (output > max_output_ && integral_term_ > 0.0f) {
     integral_term_ = max_output_ - proportional_term - derivative_term_;
-  } else if (output == min_output_ && integral_term_ < 0.0f) {
+    if (integral_term_ < 0.0f) integral_term_ = 0.0f;
+  } else if (output < min_output_ && integral_term_ < 0.0f) {
     integral_term_ = min_output_ - proportional_term - derivative_term_;
+    if (integral_term_ > 0.0f) integral_term_ = 0.0f;
   }
 
   prev_error_ = error;

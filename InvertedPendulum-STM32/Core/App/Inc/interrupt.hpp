@@ -32,7 +32,11 @@ public:
   }
 
   void handleAdcInterrupts(ADC_HandleTypeDef *hadc) {
+    if (adcHandlers == nullptr || hadc == nullptr) return;
+    
     for (int i = 0; i < adcHandlersNum; i++) {
+      if (adcHandlers[i] == nullptr) continue;
+      
       ADC_HandleTypeDef *handler = adcHandlers[i]->adcHandlerType();
       if (handler == hadc) {
         adcHandlers[i]->handleAdcInterrupt();
@@ -46,7 +50,11 @@ public:
   }
 
   void handleTimerInterrupts(TIM_HandleTypeDef *htim) {
+    if (timerHandlers == nullptr || htim == nullptr) return;
+    
     for (int i = 0; i < timerHandlersNum; i++) {
+      if (timerHandlers[i] == nullptr) continue;
+      
       TIM_HandleTypeDef *handler = timerHandlers[i]->timerHandlerType();
       if (handler == htim) {
         timerHandlers[i]->handleTimerInterrupt();
