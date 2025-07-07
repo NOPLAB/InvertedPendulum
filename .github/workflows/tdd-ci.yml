@@ -132,7 +132,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential gcov lcov
+        sudo apt-get install -y cmake build-essential gcc lcov
     
     - name: Build with coverage
       working-directory: InvertedPendulum-STM32
@@ -141,8 +141,8 @@ jobs:
         cd build_coverage
         cp ../CMakeLists_PC.txt CMakeLists.txt
         cmake -DCMAKE_BUILD_TYPE=Debug \
-              -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
-              -DCMAKE_C_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+              -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage -g -O0" \
+              -DCMAKE_C_FLAGS="--coverage -fprofile-arcs -ftest-coverage -g -O0" \
               .
         make -j$(nproc)
     
@@ -154,14 +154,20 @@ jobs:
     - name: Generate coverage report
       working-directory: InvertedPendulum-STM32/build_coverage
       run: |
+        # Initialize lcov data
+        lcov --zerocounters --directory .
+        
         # Create coverage info
         lcov --capture --directory . --output-file coverage.info
         
         # Filter out system and test files
-        lcov --remove coverage.info '/usr/*' '*Test*' '*test*' '*mock*' --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' '*Test*' '*test*' '*mock*' '*CMakeFiles*' --output-file coverage.info
         
         # Generate HTML report
         genhtml coverage.info --output-directory coverage_html
+        
+        # Display coverage summary
+        lcov --list coverage.info
     
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
