@@ -97,6 +97,28 @@
             ],
             /* If you use external loader, add additional arguments */
             //"serverArgs": ["--extload", "path/to/ext/loader.stldr"],
+        },
+        {
+            "name": "Flash STM32 Release",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/dummy.js",
+            "preLaunchTask": "Build Release + Flash",
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "Flash STM32 Releases with Tests",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/dummy.js",
+            "preLaunchTask": "Build Release with Tests + Flash",
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
         }
     ]
 }

@@ -25,7 +25,7 @@ extern "C" {
 #define TIMER_INTERRUPT_HANDLERS_NUM 1
 
 #define PI 3.14159265358979323846f
-#define DT (1.0f / 10000.0f)
+#define DT (1.0f / 10000.0f)  // サンプリング周期 [s]
 #define Kt 0.0186f            // トルク定数 [Nm/A]
 #define KE 0.0186f            // 逆起電力定数 [V*s/rad]
 #define LA 0.003f             // 電機子インダクタンス [H]
@@ -33,13 +33,16 @@ extern "C" {
 #define GEAR_RATIO 6.67f      // ギア比
 #define WHEEL_RADIUS 0.0255f  // 車輪半径 [m]
 #define Bx 2.2276f            // 摩擦係数
-#define PULSE_TO_RAD (2.0f * PI / (12.0f * 4.0f))
+#define PULSE_TO_RAD \
+  (2.0f * PI / (12.0f * 4.0f))  // エンコーダのパルスからラジアンへの変換
 // ADC_TO_RAD = (333.3 * ((2.0*pi)/360.0)) / 5.0 * 3.3
-#define ADV_TO_RAD 3.8393f
-#define PULSE_TO_POSITION \
-  (2.0f * PI * WHEEL_RADIUS) / (12.0f * 4.0f * GEAR_RATIO)
-#define ADC_TO_VOLTAGE ((2400.0f + 750.0f) / 750.0f)
-#define SPEED_TO_CURRENT (WHEEL_RADIUS / (2.0f * GEAR_RATIO * Kt))
+#define ADV_TO_RAD 3.8393f  // ADC値からラジアンへの変換
+#define PULSE_TO_POSITION      \
+  (2.0f * PI * WHEEL_RADIUS) / \
+      (12.0f * 4.0f * GEAR_RATIO)  // エンコーダのパルスから位置[m]への変換
+#define ADC_TO_VOLTAGE ((2400.0f + 750.0f) / 750.0f)  // ADC値から電圧への変換
+#define SPEED_TO_CURRENT \
+  (WHEEL_RADIUS / (2.0f * GEAR_RATIO * Kt))  // 速度から電流への変換
 
 class App {
  public:

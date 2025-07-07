@@ -4,7 +4,10 @@
         "options": {
             "shell": {
                 "executable": "cmd.exe",
-                "args": ["/d", "/c"]
+                "args": [
+                    "/d",
+                    "/c"
+                ]
             }
         }
     },
@@ -36,7 +39,7 @@
                 "CubeProg: Flash project (SWD)",
             ]
         },
-                {
+        {
             "type": "cmake",
             "label": "CMake: clean rebuild",
             "command": "cleanRebuild",
@@ -49,10 +52,61 @@
             "detail": "CMake template clean rebuild task"
         },
         {
+            "type": "cmake",
+            "label": "CMake: build Release",
+            "command": "build",
+            "targets": [
+                "all"
+            ],
+            "preset": "${command:cmake.activeBuildPresetName}",
+            "options": {
+                "buildType": "Release"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "CMake build Release task"
+        },
+        {
+            "label": "Build Release + Flash",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "CMake: build Release",
+                "CubeProg: Flash project (SWD)"
+            ]
+        },
+        {
+            "type": "cmake",
+            "label": "CMake: build Release with Tests",
+            "command": "build",
+            "targets": [
+                "all"
+            ],
+            "preset": "${command:cmake.activeBuildPresetName}",
+            "options": {
+                "buildType": "Release",
+                "environment": {
+                    "ENABLE_STM32_TESTS": "1"
+                }
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "CMake build Release with tests enabled"
+        },
+        {
+            "label": "Build Release with Tests + Flash",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "CMake: build Release with Tests",
+                "CubeProg: Flash project (SWD)"
+            ]
+        },
+        {
             "type": "shell",
             "label": "CubeProg: List all available communication interfaces",
             "command": "STM32_Programmer_CLI",
-            "args": ["--list"],
+            "args": [
+                "--list"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },

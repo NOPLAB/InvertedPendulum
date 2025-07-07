@@ -56,10 +56,10 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/App/Lib/QEI/qei.c
     Core/App/Lib/MATLAB/feedback_controller.cpp
     
-    # Test sources (conditional)
-    $<$<CONFIG:Debug>:Core/App/Test/test_framework.cpp>
-    $<$<CONFIG:Debug>:Core/App/Test/test_main.cpp>
-    $<$<CONFIG:Debug>:Core/App/Test/mock_hal.cpp>
+    # Test sources (only when ENABLE_STM32_TESTS environment variable is set)
+    $<$<BOOL:$ENV{ENABLE_STM32_TESTS}>:Core/App/Test/test_framework.cpp>
+    $<$<BOOL:$ENV{ENABLE_STM32_TESTS}>:Core/App/Test/test_main.cpp>
+    $<$<BOOL:$ENV{ENABLE_STM32_TESTS}>:Core/App/Test/mock_hal.cpp>
 )
 
 # Add include paths
@@ -70,8 +70,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/App/Lib/MATLAB
 )
 
-# Add test include paths only for Debug builds
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+# Add test include paths only when tests are enabled
+if(DEFINED ENV{ENABLE_STM32_TESTS})
     target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         Core/App/Test
     )
@@ -80,7 +80,7 @@ endif()
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
-    $<$<CONFIG:Debug>:ENABLE_TESTING>
+    $<$<BOOL:$ENV{ENABLE_STM32_TESTS}>:ENABLE_TESTING>
 )
 
 # Add linked libraries

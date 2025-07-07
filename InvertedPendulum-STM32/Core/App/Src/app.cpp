@@ -180,22 +180,22 @@ void App::interval() {
   // printf(">current_avg:%f\n", current);
   // printf(">c:%f\n", current_filtered);
 
-  // [-3.1623, -8.4042, -58.4769, -11.7355]
+  // [-3.1623, -7.0079, -33.3515, -5.0532]
   float state_feedback_u =
-      x * -3.1623f + dx * -8.4042f + theta * -58.4769f + dtheta * -11.7355f;
+      x * -3.1623f + dx * -7.0079f + theta * -33.3515f + dtheta * -5.0532f;
 
   // 力から直接電流指令に変換
   float force_to_current =
-      -state_feedback_u * (WHEEL_RADIUS / (GEAR_RATIO * Kt));
+      -state_feedback_u * (WHEEL_RADIUS / (GEAR_RATIO * Kt * 2.0f));
 
-  // printf(">force_to_current:%f\n", force_to_current);
+  // printf(">force_to_current:%f\n", force_to_current);z
 
   float u = pid_current->update(force_to_current, current_filtered) / vin;
 
   // printf(">u:%f\n", u);
 
-  motors->setSpeedLeft(u);
-  motors->setSpeedRight(u);
+  // motors->setSpeedLeft(u);
+  // motors->setSpeedRight(u);
 
   // PWM指令値を保存（次回のオブザーバーで使用）
   current_pwm_left = u;
