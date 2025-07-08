@@ -103,8 +103,8 @@ class App {
   int prev_encoder_l = 0;
   int prev_encoder_r = 0;
 
-  float current_pwm_left = 0.0f;
-  float current_pwm_right = 0.0f;
+  float prev_pwm_left = 0.0f;
+  float prev_pwm_right = 0.0f;
 
   LowPassFilter *lpf_theta = new LowPassFilter(1.0f, 1 / (2 * PI * 50), DT);
 

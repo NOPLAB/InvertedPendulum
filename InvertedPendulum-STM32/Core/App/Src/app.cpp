@@ -113,13 +113,13 @@ void App::interval() {
   Adc2CorrectedValues *adc2_values;
   adc2_values = adc2->getCorrectedValues();
 
-  int current_encoder_l = encoder_val_l - QEI_GetPulses(&encoderLeft);
+  int now_encoder_l = encoder_val_l - QEI_GetPulses(&encoderLeft);
   QEI_Reset(&encoderLeft);
-  int current_encoder_r = encoder_val_r + QEI_GetPulses(&encoderRight);
+  int now_encoder_r = encoder_val_r + QEI_GetPulses(&encoderRight);
   QEI_Reset(&encoderRight);
 
-  encoder_val_l = current_encoder_l;
-  encoder_val_r = current_encoder_r;
+  encoder_val_l = now_encoder_l;
+  encoder_val_r = now_encoder_r;
 
   // 車輪の位置
   float real_x_r = (float)encoder_val_r * PULSE_TO_POSITION;
@@ -132,13 +132,15 @@ void App::interval() {
   // モーター軸の角速度を計算 [rad/s]（オブザーバー用）
   // エンコーダーはモーター軸に直接取り付けられているため、直接変換
   float motor_speed_left =
-      (float)(current_encoder_l - prev_encoder_l) * PULSE_TO_RAD / DT;
+      (float)(now_encoder_l - prev_encoder_l) * PULSE_TO_RAD / DT;
   float motor_speed_right =
-      (float)(current_encoder_r - prev_encoder_r) * PULSE_TO_RAD / DT;
+      (float)(now_encoder_r - prev_encoder_r) * PULSE_TO_RAD / DT;
 
-  prev_encoder_l = current_encoder_l;
-  prev_encoder_r = current_encoder_r;
+  prev_encoder_l = now_encoder_l;
+  prev_encoder_r = now_encoder_r;
 
+  // printf(">l:%d\n", current_encoder_l);
+  // printf(">r:%d\n", current_encoder_r);
   // printf(">x:%f\n", x);
 
   float theta = -(float)(adc1_values->p_1 - zero_ad) * ADV_TO_RAD;
@@ -153,8 +155,8 @@ void App::interval() {
 
   // printf(">vin:%f\n", vin);
 
-  float voltage_left = current_pwm_left * vin;
-  float voltage_right = current_pwm_right * vin;
+  float voltage_left = prev_pwm_left * vin;
+  float voltage_right = prev_pwm_right * vin;
 
   // 測定電流値を取得
   float measured_current_l =
@@ -180,26 +182,27 @@ void App::interval() {
   // printf(">current_avg:%f\n", current);
   // printf(">c:%f\n", current_filtered);
 
-  // [-3.1623, -7.0079, -33.3515, -5.0532]
+  // [-1.4142, -5.3580, -20.9010, -2.5862]
   float state_feedback_u =
-      x * -3.1623f + dx * -7.0079f + theta * -33.3515f + dtheta * -5.0532f;
+      x * -1.4142f + dx * -5.3580f + theta * -20.9010f + dtheta * -2.5862f;
 
   // 力から直接電流指令に変換
   float force_to_current =
       -state_feedback_u * (WHEEL_RADIUS / (GEAR_RATIO * Kt * 2.0f));
 
-  // printf(">force_to_current:%f\n", force_to_current);z
-
   float u = pid_current->update(force_to_current, current_filtered) / vin;
 
   // printf(">u:%f\n", u);
 
-  // motors->setSpeedLeft(u);
-  // motors->setSpeedRight(u);
+  motors->setSpeedLeft(u);
+  motors->setSpeedRight(u);
+
+  // motors->setSpeedLeft(1.0f);
+  // motors->setSpeedRight(1.0f);
 
   // PWM指令値を保存（次回のオブザーバーで使用）
-  current_pwm_left = u;
-  current_pwm_right = u;
+  prev_pwm_left = u;
+  prev_pwm_right = u;
 
   prev_u = u;
 
