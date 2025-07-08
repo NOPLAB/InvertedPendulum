@@ -9,7 +9,6 @@
 #define APP_INC_APP_HPP_
 
 #include "adc.hpp"
-#include "feedback_controller.h"
 #include "interrupt.hpp"
 #include "interval.hpp"
 #include "lpf.hpp"
@@ -118,8 +117,6 @@ class App {
   PID *pid_current = new PID(0.928f, 10178.8f, 0.0f, DT, -12.0f, 12.0f);
 
   PID *pid_speed = new PID(5.0654f, 22.2759f, 0.0f, DT, -10.0f, 10.0f);
-
-  feedback_controller *controller = new feedback_controller();
 
  public:
   QEI_HandleTypeDef encoderLeft;

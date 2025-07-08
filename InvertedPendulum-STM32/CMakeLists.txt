@@ -54,8 +54,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/App/Src/lpf.cpp
     Core/App/Src/motor_observer.cpp
     Core/App/Lib/QEI/qei.c
-    Core/App/Lib/MATLAB/feedback_controller.cpp
-    
+
     # Test sources (only when ENABLE_STM32_TESTS environment variable is set)
     $<$<BOOL:$ENV{ENABLE_STM32_TESTS}>:Core/App/Test/test_framework.cpp>
     $<$<BOOL:$ENV{ENABLE_STM32_TESTS}>:Core/App/Test/test_main.cpp>
@@ -67,7 +66,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     Core/App/Inc
     Core/App/Lib/QEI
-    Core/App/Lib/MATLAB
 )
 
 # Add test include paths only when tests are enabled

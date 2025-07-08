@@ -10,7 +10,6 @@
 #include <stdio.h>
 
 #include "adc.hpp"
-#include "feedback_controller.h"
 #include "main.h"
 #include "qei.h"
 #include "stm32f3xx_hal_gpio.h"
@@ -93,8 +92,6 @@ void App::loop() {
 
   // printf("L %d, R %d\n", encoderLeftValue, encoderRightValue);
   // printf("L %f, R %f\n", adc2->getCorrectedValues()->currentL,
-
-  controller->initialize();
 
   HAL_Delay(100);
 }
