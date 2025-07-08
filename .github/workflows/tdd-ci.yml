@@ -110,6 +110,7 @@ jobs:
     - name: Check firmware size
       working-directory: InvertedPendulum-STM32/build_arm
       run: |
+        echo "=== STM32 Firmware Size (Release, no tests) ==="
         arm-none-eabi-size InvertedPendulum-STM32.elf
     
     - name: Upload firmware artifact
