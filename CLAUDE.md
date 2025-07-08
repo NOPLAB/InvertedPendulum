@@ -9,20 +9,20 @@ This is an inverted pendulum control system project with multiple implementation
 - **STM32 Implementation**: Real-time control system using STM32F303 microcontroller
 - **ESP32 Implementation**: Wireless control interface using ESP32-C3 with BLE
 - **MATLAB Simulation**: Multiple control strategies including MPC, LQR, and nonlinear control
-- **System Identification**: Parameter estimation and model validation
+- **TDD Implementation**: Test-driven development with CI/CD pipeline for STM32 code
 
 ## Build Commands
 
 ### STM32 Project (`InvertedPendulum-STM32/`)
 
 ```bash
-# Build using CMake
+# Build for PC testing (TDD)
 cd InvertedPendulum-STM32
-cmake --build build --config Debug
+./build_pc.sh
 
-# Clean and rebuild
-cmake --build build --config Debug --target clean
-cmake --build build --config Debug
+# Build using CMake (embedded target)
+cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/gcc-arm-none-eabi.cmake
+cmake --build build
 
 # Flash to hardware (requires STM32CubeProgrammer)
 # Use VS Code task: "Build + Flash" or manually:
@@ -64,11 +64,20 @@ Open MATLAB and navigate to the project directory. Key files:
 - **Motor Control**: Dual motor control for cart positioning
 - **Encoder Reading**: Quadrature encoder interface for position feedback
 - **ADC**: Analog-to-digital conversion for sensor readings
+- **PID Controller**: Real-time PID control with anti-windup
+- **LPF**: Low-pass filter for sensor signal processing
 
 **STM32 HAL Integration:**
 - Uses STM32 HAL library for hardware abstraction
 - Generated code from STM32CubeMX in `Core/Src/` and `Core/Inc/`
 - Custom application code interfaces with HAL through C++ wrappers
+
+**Test-Driven Development (TDD):**
+- `Core/App/Test/` - TDD test suite with custom test framework
+- `CMakeLists_PC.txt` - PC build configuration for cross-platform testing
+- `build_pc.sh` - Build script for PC testing
+- Mock objects for hardware abstraction layer
+- CI/CD pipeline with GitHub Actions for automated testing
 
 ### ESP32 Implementation
 
@@ -95,10 +104,12 @@ Open MATLAB and navigate to the project directory. Key files:
 
 ### Working with STM32 Code
 
-1. **Modify Application Logic**: Work primarily in `Core/App/` directory
-2. **Hardware Configuration**: Use STM32CubeMX to modify `.ioc` file, regenerate code
-3. **Build**: Use CMake or VS Code CMake extension
-4. **Debug**: Use STM32CubeIDE or VS Code with Cortex-Debug extension
+1. **TDD Development**: Write tests first in `Core/App/Test/`, then implement in `Core/App/`
+2. **Run Tests**: Use `./build_pc.sh` for PC testing before embedded build
+3. **Modify Application Logic**: Work primarily in `Core/App/` directory
+4. **Hardware Configuration**: Use STM32CubeMX to modify `.ioc` file, regenerate code
+5. **Build**: Use CMake or VS Code CMake extension
+6. **Debug**: Use STM32CubeIDE or VS Code with Cortex-Debug extension
 
 ### Working with ESP32 Code
 
@@ -116,13 +127,17 @@ Open MATLAB and navigate to the project directory. Key files:
 ## Key Files and Locations
 
 - `InvertedPendulum-STM32/Core/App/` - Main STM32 application code
-- `InvertedPendulum-STM32/CMakeLists.txt` - Build configuration
+- `InvertedPendulum-STM32/Core/App/Test/` - TDD test suite
+- `InvertedPendulum-STM32/CMakeLists.txt` - Embedded build configuration
+- `InvertedPendulum-STM32/CMakeLists_PC.txt` - PC build configuration for TDD
+- `InvertedPendulum-STM32/build_pc.sh` - PC build script
 - `InvertedPendulum-STM32/.vscode/tasks.json` - Build and flash tasks
 - `InvertedPendulum-ESP32/platformio.ini` - ESP32 project configuration
 - `InvertedPendulum-ESP32/src/main.cpp` - ESP32 BLE implementation
 - `MATLAB/control/` - Control system implementations
 - `MATLAB/equation_of_state/` - System dynamics modeling
 - `MATLAB/estimate_parameters/` - Parameter identification
+- `.github/workflows/tdd-ci.yml` - CI/CD pipeline for TDD
 
 ## Hardware Configuration
 
@@ -143,6 +158,13 @@ Open MATLAB and navigate to the project directory. Key files:
 - Arduino framework compatibility
 
 ## Testing and Validation
+
+**Test-Driven Development (TDD):**
+- Custom lightweight test framework in `Core/App/Test/test_framework.hpp`
+- Unit tests for PID controller, LPF, and other components
+- Cross-platform testing (PC and embedded)
+- Automated CI/CD pipeline with GitHub Actions
+- Code coverage analysis and quality checks
 
 **System Identification:**
 - Experimental data collection in `MATLAB/estimate_parameters/experiments/`
