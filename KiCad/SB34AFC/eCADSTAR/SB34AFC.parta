@@ -1,0 +1,68 @@
+(Japanese_coding: sjis)
+(function "ECS_18382161"
+    (uver 1)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (ctime 2023-07-05-08:54:55)
+    (utime 2024-03-18-13:24:55)
+    (interface
+        (port "1" (symbPinId 1) (portType INOUT))
+        (port "2" (symbPinId 2) (portType INOUT))
+    )
+    (property "symbolName" "SB34AFC")
+)
+
+
+(pinAssign "ECS_18382161"
+    (uver 1)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (ctime 2023-07-05-08:54:55)
+    (utime 2024-03-18-13:24:55)
+    (interface
+        (port "1" (symbPinId 1) (portName "K") (portType INOUT))
+        (port "2" (symbPinId 2) (portName "A") (portType INOUT))
+    )
+    (internal
+        (funcInst (functionRef "ECS_18382161")
+                (port "1" (match "1"))
+                (port "2" (match "2"))
+        )
+    )
+    (property "usePowerBox" "No")
+    (property "symbolName" "SB34AFC")
+)
+
+
+(part "SB34AFC"
+    (uver 1)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (ctime 2023-07-05-08:54:55)
+    (utime 2024-03-18-13:24:55)
+    (packageRef "SB34AFC")
+    (pinAssignRef "ECS_18382161")
+    (interface
+        (port "1" (symbPinId 1) (portName "K") (portType INOUT))
+        (port "2" (symbPinId 2) (portName "A") (portType INOUT))
+    )
+    (partClass UNDEF)
+    (useInSchema Y)
+    (useInLayout Y)
+    (inPartsList Y)
+    (partType NORMAL)
+    (placeRestriction FREE)
+    (property "enetNonSeries" "NO")
+    (property "refDesPrefix" "D")
+    (property "description" "Power Schottky (IF1A) - SB34AFC , Standard, 40V, 3A, SMAF-C")
+    (property "Manufacturer_Name" "PANJIT")
+    (property "Manufacturer_Part_Number" "SB34AFC")
+    (property "Mouser_Part_Number" "")
+    (property "Mouser_Price/Stock" "")
+    (property "Arrow_Part_Number" "")
+    (property "Arrow_Price/Stock" "")
+    (property "Datasheet_Link" "https://www.panjit.com.tw/en/Product/downloadPDF/SB34AFC")
+    (property "compAreaTopHeight" 1.1)
+)
+
+

@@ -1,0 +1,11 @@
+FILE_TYPE = MULTI_PHYS_TABLE;
+
+PART 'TC4051BP'
+CLASS = IC
+{========================================================================================}
+:"MANUFACTURER_NAME", "MANUFACTURER_PART_NUMBER"= "PART_NUMBER", "JEDEC_TYPE", "PACK_TYPE", "MOUSER_PART_NUMBER", "MOUSER_PRICE/STOCK", "ARROW_PART_NUMBER", "ARROW_PRICE/STOCK", "DESCRIPTION", "DATASHEET", "HEIGHT";
+{========================================================================================}
+ "Toshiba", "TC4051BP" (!) = "", "DIP762W60P254L1925H445Q16N", "Dual-In-Line Packages", "N/A", "https://www.mouser.co.uk/ProductDetail/Toshiba/TC4051BP?qs=f0GatGUIxV14%252BVsMEr24fA%3D%3D", "", "", "TC4051BP Toshiba, Multiplexer/Demultiplexer Single 8:1, 12 V, 15 V, 5 V, 9 V, 16-Pin PDIP", "https://pdf1.alldatasheet.com/datasheet-pdf/view/31640/TOSHIBA/TC4051BP.html", "4.45 mm"
+END_PART
+
+END.

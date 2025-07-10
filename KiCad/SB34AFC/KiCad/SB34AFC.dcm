@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP SB34AFC
+D Power Schottky (IF1A) - SB34AFC , Standard, 40V, 3A, SMAF-C
+K
+F https://www.panjit.com.tw/en/Product/downloadPDF/SB34AFC
+$ENDCMP
+#
+#End Doc Library

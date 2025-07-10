@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP TC4051BP
+D TC4051BP Toshiba, Multiplexer/Demultiplexer Single 8:1, 12 V, 15 V, 5 V, 9 V, 16-Pin PDIP
+K
+F https://pdf1.alldatasheet.com/datasheet-pdf/view/31640/TOSHIBA/TC4051BP.html
+$ENDCMP
+#
+#End Doc Library

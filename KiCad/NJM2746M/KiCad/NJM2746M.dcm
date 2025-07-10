@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP NJM2746M
+D Op Amp, 10MHz, 3  12 V, 8-Pin DMP
+K
+F https://datasheet.datasheetarchive.com/originals/distributors/Datasheets-306/93116.pdf
+$ENDCMP
+#
+#End Doc Library

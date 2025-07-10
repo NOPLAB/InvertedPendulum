@@ -1,0 +1,10 @@
+(unit MM)
+
+(package "HCTYPEC16PCB10"
+    (type UNDEF)
+    (uver 2)
+    (mountForm default
+        (footprintRef "HCTYPEC16PCB10")
+        (spec "default")
+    )
+)

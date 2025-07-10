@@ -1,0 +1,13 @@
+(unit MM)
+
+(package "TC4051BP"
+    (type UNDEF)
+    (uver 2)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (utime 2018-08-08-11:55:21)
+    (mountForm default
+        (footprintRef "DIP762W60P254L1925H445Q16N")
+        (spec "System")
+    )
+)

@@ -1,0 +1,9 @@
+Manufacturer=Diptronics
+PartNumber=DTS-63N-V
+PartCategory=Switch
+PackageCategory=Other
+PinCount=4
+Version=3.4
+Released=2022-06-02 07:31:59
+Downloaded=2025-06-18 05:12:01
+3D=Y

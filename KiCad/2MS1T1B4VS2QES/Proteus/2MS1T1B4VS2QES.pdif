@@ -1,0 +1,125 @@
+;Proteus Design Interchange Format
+(PDIF
+ (vendor "SamacSys Limited")
+ (version 1 0)
+ (library
+  (part "2MS1T1B4VS2QES"
+   (description "Toggle Switches")
+   (family "ANA")
+   (package "2MS1T1B4VS2QES")
+   (attribute "Datasheet Link" "https://akizukidenshi.com/download/ds/cosland/2MS1-T1-B4-VS2-Q-E-S.pdf")
+   (attribute "Geometry.Height" "23.61mm")
+   (attribute "Manufacturer_Name" "Dailywell")
+   (attribute "Manufacturer_Part_Number" "2MS1T1B4VS2QES")
+   (attribute "Mouser Part Number" "N/A")
+   (attribute "Mouser Price/Stock" "https://www.mouser.co.uk/ProductDetail/Dailywell/2MS1T1B4VS2QES?qs=Zz7%252BYVVL6bHHqAn5ycuDAQ%3D%3D")
+   (attribute "Arrow Part Number" "")
+   (attribute "Arrow Price/Stock" "")
+   (gate
+    (symbol "2MS1T1B4VS2QES")
+    (pin "NO" 1 PS)
+    (pin "COM" 2 PS)
+    (pin "NC" 3 NC)
+    (pin "MH1" MH1 PS)
+    (pin "MH2" MH2 PS)
+   )
+  )
+  (symbol "2MS1T1B4VS2QES"
+   (units THOU)
+   (origin (pt 0 0))
+   (graphic
+    (stroke 10)
+    (path (pt 200 100) (pt 700 100) (pt 700 -500) (pt 200 -500) (pt 200 100) (closed))
+   )
+   (terminal
+    (body (symbol "PIN") (pt 0 -100) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+   (terminal
+    (body (symbol "PIN") (pt 0 -200) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+   (terminal
+    (body (symbol "PIN") (pt 0 -300) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+   (terminal
+    (body (symbol "PIN") (pt 0 0) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+   (terminal
+    (body (symbol "PIN") (pt 0 -400) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+  )
+  (symbol "PIN"
+   (units THOU)
+   (origin (pt 0 0))
+   (graphic
+    (stroke 10)
+    (path (pt 0 0) (pt 200 0))))
+  (symbol "PINSHORT"
+   (units THOU)
+   (origin (pt 0 0))
+   (graphic
+    (stroke 10)
+    (path (pt 0 0) (pt 100 0))))
+  (package "2MS1T1B4VS2QES"
+   (units MM)
+   (layer TASM
+    (graphic
+     (stroke 0.2)
+     (path
+      (closed true)
+      (pt -2.54 2.54)
+      (pt 2.54 2.54)
+      (pt 2.54 -7.62)
+      (pt -2.54 -7.62)
+      (pt -2.54 2.54))))
+   (layer OCCA
+    (graphic
+     (stroke 0.1)
+     (path
+      (closed true)
+      (pt -3.54 4.358)
+      (pt 3.54 4.358)
+      (pt 3.54 -9.438)
+      (pt -3.54 -9.438)
+      (pt -3.54 4.358))))
+   (layer TSLK
+    (graphic
+     (stroke 0.1)
+     (path
+      (closed false)
+      (pt 1 2.54)
+      (pt 2.54 2.54)
+      (pt 2.54 -7.62)
+      (pt 1 -7.62))))
+   (layer TSLK
+    (graphic
+     (stroke 0.1)
+     (path
+      (closed false)
+      (pt -1 2.54)
+      (pt -2.54 2.54)
+      (pt -2.54 -7.62)
+      (pt -1 -7.62))))
+   (leg 1 (pt 0.000 0.000) (padstack 0))
+   (leg 2 (pt 0.000 -2.540) (padstack 0))
+   (leg 3 (pt 0.000 -5.080) (padstack 0))
+   (leg MH1 (pt 0.000 2.540) (padstack 0))
+   (leg MH2 (pt 0.000 -7.620) (padstack 0))
+   (padstack 0
+    (hole 1.09)
+    (plated true)
+    (pad (layer TCOP) (round 1.635))
+    (pad (layer INNER) (round 1.635))
+    (pad (layer BCOP) (round 1.635))
+   )
+   (model "2MS1T1B4VS2QES.stp"
+    (euler 90 0 0)
+    (offset 0 -2.5399999618530273 0.41999998688697815)
+   )
+  )
+ )
+)

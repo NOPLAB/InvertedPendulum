@@ -1,0 +1,11 @@
+FILE_TYPE = MULTI_PHYS_TABLE;
+
+PART 'NJM2746M'
+CLASS = IC
+{========================================================================================}
+:"MANUFACTURER_NAME", "MANUFACTURER_PART_NUMBER"= "PART_NUMBER", "JEDEC_TYPE", "PACK_TYPE", "MOUSER_PART_NUMBER", "MOUSER_PRICE/STOCK", "ARROW_PART_NUMBER", "ARROW_PRICE/STOCK", "DESCRIPTION", "DATASHEET", "HEIGHT";
+{========================================================================================}
+ "New Japan Radio", "NJM2746M" (!) = "", "SOIC127P680X200-8N", "Small Outline Packages", "513-NJM2746M", "https://www.mouser.co.uk/ProductDetail/NJR/NJM2746M?qs=Gh61b4mt6UKVBSM46CS%2FJQ%3D%3D", "", "", "Op Amp, 10MHz, 3  12 V, 8-Pin DMP", "https://datasheet.datasheetarchive.com/originals/distributors/Datasheets-306/93116.pdf", "2 mm"
+END_PART
+
+END.

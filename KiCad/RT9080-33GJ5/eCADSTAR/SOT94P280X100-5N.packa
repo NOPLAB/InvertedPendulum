@@ -1,0 +1,13 @@
+(unit MM)
+
+(package "RT9080-33GJ5"
+    (type UNDEF)
+    (uver 2)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (utime 2019-05-22-12:49:19)
+    (mountForm default
+        (footprintRef "SOT94P280X100-5N")
+        (spec "System")
+    )
+)

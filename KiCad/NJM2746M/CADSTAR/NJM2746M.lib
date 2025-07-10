@@ -1,0 +1,18 @@
+.NJM2746M :1 ;Op Amp, 10MHz, 3  12 V, 8-Pin DMP
+SOIC127P680X200-8N
+*STM IC
+*NGS
+*PLB 1="A OUTPUT" 2="A- INPUT" 3="A +INPUT" 4="GND(V-)" 5="B +INPUT" 6="B - INPUT" 7="B OUTPUT" 8="V+"
+*MXP 8
+*DFN NJM2746M
+~!Manufacturer_Name (New Japan Radio)
+~!Manufacturer_Part_Number (NJM2746M)
+~!Mouser Part Number (513-NJM2746M)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/NJR/NJM2746M?qs=Gh61b4mt6UKVBSM46CS%2FJQ%3D%3D)
+~!Arrow Part Number (-)
+~!Arrow Price/Stock (-)
+~!Link Datasheet (https://datasheet.datasheetarchive.com/originals/distributors/Datasheets-306/93116.pdf)
+~!Height (2mm)
+~!3D_Model (NJM2746M)
+NJM2746M
+1.1!U 2.1!U 3.1!U 4.1!U 8.1!U 7.1!U 6.1!U 5.1!U 

@@ -1,0 +1,9 @@
+Manufacturer=hanxia
+PartNumber=HC-TYPE-C-16P-CB1.0
+PartCategory=Connector
+PackageCategory=Other
+PinCount=16
+Version=1.7
+Released=2025-03-29 09:25:15
+Downloaded=2025-06-16 05:06:03
+3D=N
