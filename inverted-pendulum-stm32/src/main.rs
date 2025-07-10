@@ -2,6 +2,7 @@
 #![no_main]
 
 mod fmt;
+mod motor;
 mod qei;
 
 use core::cell::RefCell;
@@ -20,9 +21,12 @@ use embassy_stm32::{
     gpio::{Level, Output, Pull, Speed},
     peripherals,
     rcc::AdcClockSource,
+    time::Hertz,
+    timer::simple_pwm::{PwmPin, SimplePwm},
 };
 use embassy_time::{Duration, Ticker, Timer};
 use fmt::info;
+use motor::Motors;
 use qei::{Qei, QeiEncoding, QeiState};
 
 bind_interrupts!(struct Irqs {
@@ -63,6 +67,9 @@ static QEI_L_STATE: Mutex<ThreadModeRawMutex, RefCell<QeiState>> =
         curr_state: 0,
         prev_state: 0,
     }));
+
+static MOTORS: Mutex<ThreadModeRawMutex, RefCell<Option<Motors>>> =
+    embassy_sync::mutex::Mutex::new(RefCell::new(None));
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -139,6 +146,54 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(qei_encoder_r(qei_r));
     spawner.must_spawn(qei_encoder_l(qei_l));
 
+    // Motor Setup
+    let motor_r_1_2 = SimplePwm::new(
+        p.TIM1,
+        None,
+        None,
+        Some(PwmPin::new_ch3(
+            p.PA10,
+            embassy_stm32::gpio::OutputType::PushPull,
+        )),
+        Some(PwmPin::new_ch4(
+            p.PA11,
+            embassy_stm32::gpio::OutputType::PushPull,
+        )),
+        Hertz(100_000),
+        embassy_stm32::timer::low_level::CountingMode::EdgeAlignedUp,
+    );
+    let mut motor_l_1 = SimplePwm::new(
+        p.TIM2,
+        None,
+        Some(PwmPin::new_ch2(
+            p.PA1,
+            embassy_stm32::gpio::OutputType::PushPull,
+        )),
+        None,
+        None,
+        Hertz(100_000),
+        embassy_stm32::timer::low_level::CountingMode::EdgeAlignedUp,
+    );
+    let motor_l_2 = SimplePwm::new(
+        p.TIM3,
+        None,
+        None,
+        None,
+        Some(PwmPin::new_ch4(
+            p.PB7,
+            embassy_stm32::gpio::OutputType::PushPull,
+        )),
+        Hertz(100_000),
+        embassy_stm32::timer::low_level::CountingMode::EdgeAlignedUp,
+    );
+
+    motor_l_1.ch1().enable();
+    motor_l_1.ch1().set_duty_cycle_percent(80);
+
+    // Initialize Motor Controller
+    let motors = Motors::new(motor_r_1_2, motor_l_1, motor_l_2);
+    MOTORS.lock().await.replace(Some(motors));
+
     spawner.must_spawn(ticker_control());
 
     loop {
@@ -149,23 +204,26 @@ async fn main(spawner: Spawner) {
 
         let adc_state = ADC_STATE.lock().await;
         let adc_state = adc_state.borrow();
-        
+
         let qei_r_state = QEI_R_STATE.lock().await;
         let qei_r = qei_r_state.borrow();
-        
+
         let qei_l_state = QEI_L_STATE.lock().await;
         let qei_l = qei_l_state.borrow();
-        
+
         // Calculate angles from encoder pulses (assuming 1000 pulses per revolution)
         // Convert to degrees * 10 for display (e.g., 1234 means 123.4 degrees)
         let angle_r_x10 = (qei_r.pulses * 3600) / 1000;
         let angle_l_x10 = (qei_l.pulses * 3600) / 1000;
-        
+
         info!(
             "ADC: theta1={}, theta2={} | QEI R: {} pulses, {}°x10 | QEI L: {} pulses, {}°x10",
-            adc_state.theta1, adc_state.theta2, 
-            qei_r.pulses, angle_r_x10,
-            qei_l.pulses, angle_l_x10
+            adc_state.theta1,
+            adc_state.theta2,
+            qei_r.pulses,
+            angle_r_x10,
+            qei_l.pulses,
+            angle_l_x10
         );
     }
 }
@@ -253,12 +311,21 @@ async fn qei_encoder_l(mut qei: Qei<'static>) {
 #[embassy_executor::task]
 async fn ticker_control() {
     let mut ticker = Ticker::every(Duration::from_millis(100));
+    let mut counter = 0u32;
 
     loop {
-        //
+        // Example motor control logic
+        if let Some(motors) = MOTORS.lock().await.borrow_mut().as_mut() {
+            match (counter / 10) % 4 {
+                0 => motors.set_speed_both(0.0, 0.0),   // Stop
+                1 => motors.set_speed_both(1.0, 1.0),   // Forward
+                2 => motors.set_speed_both(0.0, 0.0),   // Stop
+                3 => motors.set_speed_both(-1.0, -1.0), // Backward
+                _ => {}
+            }
+        }
 
-        // Wait for the next ticker event
-
+        counter += 1;
         ticker.next().await;
     }
 }
