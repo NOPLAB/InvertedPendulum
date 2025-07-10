@@ -1,0 +1,11 @@
+FILE_TYPE = MULTI_PHYS_TABLE;
+
+PART 'RT9080_33GJ5'
+CLASS = IC
+{========================================================================================}
+:"MANUFACTURER_NAME", "MANUFACTURER_PART_NUMBER"= "PART_NUMBER", "JEDEC_TYPE", "PACK_TYPE", "MOUSER_PART_NUMBER", "MOUSER_PRICE/STOCK", "ARROW_PART_NUMBER", "ARROW_PRICE/STOCK", "DESCRIPTION", "DATASHEET", "HEIGHT";
+{========================================================================================}
+ "RICHTEK", "RT9080-33GJ5" (!) = "", "SOT94P280X100-5N", "SOT23 (5-Pin)", "835-RT9080-33GJ5", "https://www.mouser.co.uk/ProductDetail/Richtek/RT9080-33GJ5?qs=amGC7iS6iy9hJG6yuLjyPQ%3D%3D", "", "", "IC REG LIN 3.3V 600MA TSOT23-5", "https://www.richtek.com/assets/product_file/RT9080/DS9080-05.pdf", "1 mm"
+END_PART
+
+END.

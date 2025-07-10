@@ -1,0 +1,13 @@
+(unit MM)
+
+(package "2MS1T1B4VS2QES"
+    (type UNDEF)
+    (uver 2)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (utime 2020-11-28-19:43:19)
+    (mountForm default
+        (footprintRef "2MS1T1B4VS2QES")
+        (spec "System")
+    )
+)

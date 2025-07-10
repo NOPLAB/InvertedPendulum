@@ -1,0 +1,9 @@
+Manufacturer=PANJIT
+PartNumber=SB34AFC
+PartCategory=Schottky Diode
+PackageCategory=Small Outline Diode Flat Lead
+PinCount=2
+Version=7.1
+Released=2023-07-05 08:54:55
+Downloaded=2025-06-16 05:06:08
+3D=Y

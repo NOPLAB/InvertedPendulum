@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP HC-TYPE-C-16P-CB1.0
+D 3A 1 Sink panel 16P Female -25~+85 Type-C SMD USB Connectors ROHS
+K
+F https://www.lcsc.com/datasheet/lcsc_datasheet_2211161000_HCTL-HC-TYPE-C-16P-CB1-0_C2894901.pdf
+$ENDCMP
+#
+#End Doc Library

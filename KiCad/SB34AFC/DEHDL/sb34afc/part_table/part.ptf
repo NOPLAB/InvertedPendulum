@@ -1,0 +1,11 @@
+FILE_TYPE = MULTI_PHYS_TABLE;
+
+PART 'SB34AFC'
+CLASS = DISCRETE
+{========================================================================================}
+:"MANUFACTURER_NAME", "MANUFACTURER_PART_NUMBER"= "PART_NUMBER", "JEDEC_TYPE", "PACK_TYPE", "MOUSER_PART_NUMBER", "MOUSER_PRICE/STOCK", "ARROW_PART_NUMBER", "ARROW_PRICE/STOCK", "DESCRIPTION", "DATASHEET", "HEIGHT";
+{========================================================================================}
+ "PANJIT", "SB34AFC" (!) = "", "SODFL4725X110N", "Small Outline Diode Flat Lead", "", "", "", "", "Power Schottky (IF1A) - SB34AFC , Standard, 40V, 3A, SMAF-C", "https://www.panjit.com.tw/en/Product/downloadPDF/SB34AFC", "1.1 mm"
+END_PART
+
+END.

@@ -1,0 +1,11 @@
+FILE_TYPE = MULTI_PHYS_TABLE;
+
+PART 'DTS_63N_V'
+CLASS = DISCRETE
+{========================================================================================}
+:"MANUFACTURER_NAME", "MANUFACTURER_PART_NUMBER"= "PART_NUMBER", "JEDEC_TYPE", "PACK_TYPE", "MOUSER_PART_NUMBER", "MOUSER_PRICE/STOCK", "ARROW_PART_NUMBER", "ARROW_PRICE/STOCK", "DESCRIPTION", "DATASHEET", "HEIGHT";
+{========================================================================================}
+ "Diptronics", "DTS-63N-V" (!) = "", "DTS63NV", "Other", "113-DTS-63N-V", "https://www.mouser.co.uk/ProductDetail/Diptronics/DTS-63N-V?qs=gTYE2QTfZfThxtJn%252Bv%252BG2g%3D%3D", "", "", "6x6 Through Hole & Ground Terminal Type,TS 6MM V H=7.0 160gf BULK", "http://www.dip.com.tw/en/en-product-information/en-switch004/item/download/2504_1f511f4f5b826e90b17b1a41bfb6a3ce", "7 mm"
+END_PART
+
+END.

@@ -1,0 +1,11 @@
+FILE_TYPE = MULTI_PHYS_TABLE;
+
+PART '2MS1T1B4VS2QES'
+CLASS = IC
+{========================================================================================}
+:"MANUFACTURER_NAME", "MANUFACTURER_PART_NUMBER"= "PART_NUMBER", "JEDEC_TYPE", "PACK_TYPE", "MOUSER_PART_NUMBER", "MOUSER_PRICE/STOCK", "ARROW_PART_NUMBER", "ARROW_PRICE/STOCK", "DESCRIPTION", "DATASHEET", "HEIGHT";
+{========================================================================================}
+ "Dailywell", "2MS1T1B4VS2QES" (!) = "", "2MS1T1B4VS2QES", "Other", "N/A", "https://www.mouser.co.uk/ProductDetail/Dailywell/2MS1T1B4VS2QES?qs=Zz7%252BYVVL6bHHqAn5ycuDAQ%3D%3D", "", "", "Toggle Switches", "https://akizukidenshi.com/download/ds/cosland/2MS1-T1-B4-VS2-Q-E-S.pdf", "23.61 mm"
+END_PART
+
+END.

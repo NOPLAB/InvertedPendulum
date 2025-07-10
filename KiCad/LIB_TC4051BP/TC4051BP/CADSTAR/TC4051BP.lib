@@ -1,0 +1,18 @@
+.TC4051BP :1 ;TC4051BP Toshiba, Multiplexer/Demultiplexer Single 8:1, 12 V, 15 V, 5 V, 9 V, 16-Pin PDIP
+DIP762W60P254L1925H445Q16N
+*STM IC
+*NGS
+*PLB 1="4" 2="5_1" 3="COM" 4="7" 5="5_2" 6="INH" 7="VEE" 8="VSS" 9="C" 10="B" 11="A" 12="3" 13="0" 14="1" 15="2" 16="VDD"
+*MXP 16
+*DFN TC4051BP
+~!Manufacturer_Name (Toshiba)
+~!Manufacturer_Part_Number (TC4051BP)
+~!Mouser Part Number (N/A)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/Toshiba/TC4051BP?qs=f0GatGUIxV14%252BVsMEr24fA%3D%3D)
+~!Arrow Part Number (-)
+~!Arrow Price/Stock (-)
+~!Link Datasheet (https://pdf1.alldatasheet.com/datasheet-pdf/view/31640/TOSHIBA/TC4051BP.html)
+~!Height (4.45mm)
+~!3D_Model (TC4051BP)
+TC4051BP
+1.1!U 2.1!U 3.1!U 4.1!U 5.1!U 6.1!U 7.1!U 8.1!U 16.1!U 15.1!U 14.1!U 13.1!U 12.1!U 11.1!U 10.1!U 9.1!U 

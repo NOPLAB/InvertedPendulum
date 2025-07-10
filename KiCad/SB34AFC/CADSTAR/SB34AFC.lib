@@ -1,0 +1,18 @@
+.SB34AFC :1 ;Power Schottky (IF1A) - SB34AFC , Standard, 40V, 3A, SMAF-C
+SODFL4725X110N
+*STM D
+*NGS
+*PLB 1="K" 2="A"
+*MXP 2
+*DFN SB34AFC
+~!Manufacturer_Name (PANJIT)
+~!Manufacturer_Part_Number (SB34AFC)
+~!Mouser Part Number (-)
+~!Mouser Price/Stock (-)
+~!Arrow Part Number (-)
+~!Arrow Price/Stock (-)
+~!Link Datasheet (https://www.panjit.com.tw/en/Product/downloadPDF/SB34AFC)
+~!Height (1.1mm)
+~!3D_Model (SB34AFC)
+SB34AFC
+1.1!U 2.1!U 

@@ -1,0 +1,11 @@
+FILE_TYPE = MULTI_PHYS_TABLE;
+
+PART 'HC_TYPE_C_16P_CB1.0'
+CLASS = IO
+{========================================================================================}
+:"MANUFACTURER_NAME", "MANUFACTURER_PART_NUMBER"= "PART_NUMBER", "JEDEC_TYPE", "PACK_TYPE", "MOUSER_PART_NUMBER", "MOUSER_PRICE/STOCK", "ARROW_PART_NUMBER", "ARROW_PRICE/STOCK", "DESCRIPTION", "DATASHEET", "HEIGHT";
+{========================================================================================}
+ "hanxia", "HC-TYPE-C-16P-CB1.0" (!) = "", "HCTYPEC16PCB10", "Other", "", "", "", "", "3A 1 Sink panel 16P Female -25~+85 Type-C SMD USB Connectors ROHS", "https://www.lcsc.com/datasheet/lcsc_datasheet_2211161000_HCTL-HC-TYPE-C-16P-CB1-0_C2894901.pdf", "3.36 mm"
+END_PART
+
+END.

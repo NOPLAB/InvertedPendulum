@@ -1,0 +1,13 @@
+(unit MM)
+
+(package "NJM2746M"
+    (type UNDEF)
+    (uver 2)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (utime 2019-08-04-03:29:01)
+    (mountForm default
+        (footprintRef "SOIC127P680X200-8N")
+        (spec "System")
+    )
+)

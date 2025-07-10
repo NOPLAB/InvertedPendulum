@@ -1,0 +1,9 @@
+Manufacturer=RICHTEK
+PartNumber=RT9080-33GJ5
+PartCategory=Integrated Circuit
+PackageCategory=SOT23 (5-Pin)
+PinCount=5
+Version=1.1
+Released=2018-11-14 09:39:42
+Downloaded=2025-06-16 04:50:10
+3D=Y

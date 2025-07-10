@@ -1,0 +1,18 @@
+.HC-TYPE-C-16P-CB1.0 :1 ;3A 1 Sink panel 16P Female -25~+85 Type-C SMD USB Connectors ROHS
+HCTYPEC16PCB10
+*STM J
+*NGS
+*PNM 1=A1 2=A4 3=A5 4=A6 5=A7 6=A8 7=B1 8=B4 9=B5 10=B6 11=B7 12=B8 13=MH1 14=MH2 15=MH3 16=MH4
+*PLB 1="GND_1" 2="VBUS_1" 3="CC1" 4="DP1" 5="DN1" 6="SBU1" 7="GND_2" 8="VBUS_2" 9="CC2" 10="DP2" 11="DN2" 12="SBU2" 13="MH1" 14="MH2" 15="MH3" 16="MH4"
+*MXP 16
+*DFN HC-TYPE-C-16P-CB1.0
+~!Manufacturer_Name (hanxia)
+~!Manufacturer_Part_Number (HC-TYPE-C-16P-CB1.0)
+~!Mouser Part Number (-)
+~!Mouser Price/Stock (-)
+~!Arrow Part Number (-)
+~!Arrow Price/Stock (-)
+~!Link Datasheet (https://www.lcsc.com/datasheet/lcsc_datasheet_2211161000_HCTL-HC-TYPE-C-16P-CB1-0_C2894901.pdf)
+~!Height (3.36mm)
+HC-TYPE-C-16P-CB1.0
+1.1!U 2.1!U 3.1!U 4.1!U 5.1!U 6.1!U 7.1!U 8.1!U 9.1!U 10.1!U 11.1!U 12.1!U 13.1!U 14.1!U 15.1!U 16.1!U 

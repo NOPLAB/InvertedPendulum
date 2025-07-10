@@ -1,0 +1,18 @@
+.DTS-63N-V :1 ;6x6 Through Hole & Ground Terminal Type,TS 6MM V H=7.0 160gf BULK
+DTS63NV
+*STM S
+*NGS
+*PLB 1="COM_1" 2="COM_2" 3="NO_1" 4="NO_2"
+*MXP 4
+*DFN DTS-63N-V
+~!Manufacturer_Name (Diptronics)
+~!Manufacturer_Part_Number (DTS-63N-V)
+~!Mouser Part Number (113-DTS-63N-V)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/Diptronics/DTS-63N-V?qs=gTYE2QTfZfThxtJn%252Bv%252BG2g%3D%3D)
+~!Arrow Part Number (-)
+~!Arrow Price/Stock (-)
+~!Link Datasheet (http://www.dip.com.tw/en/en-product-information/en-switch004/item/download/2504_1f511f4f5b826e90b17b1a41bfb6a3ce)
+~!Height (7mm)
+~!3D_Model (DTS-63N-V)
+DTS-63N-V
+1.1!U 2.1!U 3.1!U 4.1!U 

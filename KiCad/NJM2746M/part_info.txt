@@ -1,0 +1,9 @@
+Manufacturer=New Japan Radio
+PartNumber=NJM2746M
+PartCategory=Integrated Circuit
+PackageCategory=Small Outline Packages
+PinCount=8
+Version=1.1
+Released=2019-08-04 03:29:01
+Downloaded=2025-06-16 04:54:53
+3D=Y

@@ -1,0 +1,9 @@
+Manufacturer=Dailywell
+PartNumber=2MS1T1B4VS2QES
+PartCategory=Integrated Circuit
+PackageCategory=Other
+PinCount=5
+Version=1.4
+Released=2020-11-28 19:43:19
+Downloaded=2025-06-16 06:30:53
+3D=Y

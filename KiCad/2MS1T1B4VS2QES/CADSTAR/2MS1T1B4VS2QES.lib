@@ -1,0 +1,19 @@
+.2MS1T1B4VS2QES :1 ;Toggle Switches
+"2MS1T1B4VS2QES"
+*STM IC
+*NGS
+*PNM 1=1 2=2 3=3 4=MH1 5=MH2
+*PLB 1="NO" 2="COM" 3="NC" 4="MH1" 5="MH2"
+*MXP 5
+*DFN 2MS1T1B4VS2QES
+~!Manufacturer_Name (Dailywell)
+~!Manufacturer_Part_Number (2MS1T1B4VS2QES)
+~!Mouser Part Number (N/A)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/Dailywell/2MS1T1B4VS2QES?qs=Zz7%252BYVVL6bHHqAn5ycuDAQ%3D%3D)
+~!Arrow Part Number (-)
+~!Arrow Price/Stock (-)
+~!Link Datasheet (https://akizukidenshi.com/download/ds/cosland/2MS1-T1-B4-VS2-Q-E-S.pdf)
+~!Height (23.61mm)
+~!3D_Model (2MS1T1B4VS2QES)
+"2MS1T1B4VS2QES"
+1.1!U 2.1!U 3.1!U 4.1!U 5.1!U 

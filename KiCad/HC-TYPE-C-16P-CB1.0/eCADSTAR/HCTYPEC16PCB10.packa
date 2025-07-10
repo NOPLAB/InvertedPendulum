@@ -1,0 +1,13 @@
+(unit MM)
+
+(package "HC-TYPE-C-16P-CB1_0"
+    (type UNDEF)
+    (uver 2)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (utime 2025-03-29-09:25:15)
+    (mountForm default
+        (footprintRef "HCTYPEC16PCB10")
+        (spec "System")
+    )
+)
