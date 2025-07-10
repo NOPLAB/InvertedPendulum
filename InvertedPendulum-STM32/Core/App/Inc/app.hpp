@@ -12,6 +12,7 @@
 #include "interrupt.hpp"
 #include "interval.hpp"
 #include "lpf.hpp"
+#include "mit_adaptive_controller.hpp"
 #include "motor.hpp"
 #include "motor_observer.hpp"
 #include "pid.hpp"
@@ -24,14 +25,14 @@ extern "C" {
 #define TIMER_INTERRUPT_HANDLERS_NUM 1
 
 #define PI 3.14159265358979323846f
-#define DT (1.0f / 10000.0f)  // サンプリング周期 [s]
-#define Kt 0.0186f            // トルク定数 [Nm/A]
-#define KE 0.0186f            // 逆起電力定数 [V*s/rad]
-#define LA 0.003f             // 電機子インダクタンス [H]
-#define RA 32.4f              // 電機子抵抗 [Ω]
-#define GEAR_RATIO 6.67f      // ギア比
-#define WHEEL_RADIUS 0.0255f  // 車輪半径 [m]
-#define Bx 2.2276f            // 摩擦係数
+#define DT (100.0f / 1000.0f / 1000.0f)  // 10kHzサンプリング周期 [s]
+#define Kt 0.0186f                       // トルク定数 [Nm/A]
+#define KE 0.0186f                       // 逆起電力定数 [V*s/rad]
+#define LA 0.003f                        // 電機子インダクタンス [H]
+#define RA 32.4f                         // 電機子抵抗 [Ω]
+#define GEAR_RATIO 6.67f                 // ギア比
+#define WHEEL_RADIUS 0.0255f             // 車輪半径 [m]
+#define Bx 2.2276f                       // 粘性摩擦係数
 #define PULSE_TO_RAD \
   (2.0f * PI / (12.0f * 4.0f))  // エンコーダのパルスからラジアンへの変換
 // ADC_TO_RAD = (333.3 * ((2.0*pi)/360.0)) / 5.0 * 3.3
@@ -69,6 +70,9 @@ class App {
   // 一定時間ごとに呼ばれる
   void interval();
 
+  // 1kHz制御周期で呼ばれる
+  // void interval_1khz();
+
  public:
   InterruptHandler *getInterruptHandler() { return this->interruptHandler; }
 
@@ -78,6 +82,7 @@ class App {
   ITimerInterruptHandler *timerInterruptHandlers[TIMER_INTERRUPT_HANDLERS_NUM];
 
   Interval *intervalCaller = nullptr;
+  // Interval *intervalCaller_1khz = nullptr;
 
   Adc1 *adc1 = nullptr;
   Adc2 *adc2 = nullptr;
@@ -105,7 +110,7 @@ class App {
   float prev_pwm_left = 0.0f;
   float prev_pwm_right = 0.0f;
 
-  LowPassFilter *lpf_theta = new LowPassFilter(1.0f, 1 / (2 * PI * 50), DT);
+  LowPassFilter *lpf_theta = new LowPassFilter(1.0f, 1 / (2 * PI * 500), DT);
 
   LowPassFilter *lpf_current = new LowPassFilter(1.0f, 1 / (2 * PI * 1000), DT);
 
@@ -115,8 +120,13 @@ class App {
       new MotorCurrentObserver(Kt, KE, LA, RA, DT);
 
   PID *pid_current = new PID(0.928f, 10178.8f, 0.0f, DT, -12.0f, 12.0f);
+  // PID *pid_speed = new PID(5.0654f, 22.2759f, 0.0f, DT, -10.0f, 10.0f);
 
-  PID *pid_speed = new PID(5.0654f, 22.2759f, 0.0f, DT, -10.0f, 10.0f);
+  MitAdaptiveController *adaptive_controller =
+      new MitAdaptiveController(DT, 1.0f, 1.0f, 1.0f, 1.0f);
+
+  float uart_x = 0.0f;
+  float uart_theta = 0.0f;
 
  public:
   QEI_HandleTypeDef encoderLeft;

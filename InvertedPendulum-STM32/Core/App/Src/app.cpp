@@ -8,11 +8,18 @@
 #include "app.hpp"
 
 #include <stdio.h>
+// #include <string.h>
 
 #include "adc.hpp"
 #include "main.h"
 #include "qei.h"
 #include "stm32f3xx_hal_gpio.h"
+// #include "stm32f3xx_hal_uart.h"
+// #include "usart.h"
+
+// uint8_t uart_tx[10] = {0};
+// uint8_t uart_rx[4] = {0};
+// float uart_u = 0.0f;
 
 #define AMPLIFICATION_FACTOR 150.0f
 #define SHUNT_REGISTER 0.010f
@@ -31,7 +38,10 @@ int App::run() {
 }
 
 void App::initialize() {
-  this->intervalCaller = new Interval([]() { App::getInstance().interval(); });
+  this->intervalCaller =
+      new Interval([]() { App::getInstance().interval(); }, 10000);  // 10kHz
+  // this->intervalCaller_1khz =
+  // new Interval([]() { App::getInstance().interval_1khz(); }, 1000);  // 1kHz
   this->adc1 = new Adc1();
   this->adc2 = new Adc2();
   this->motors = new Motors();
@@ -44,17 +54,21 @@ void App::initialize() {
   this->adcInterruptHandlers[0] = this->adc1;
   this->adcInterruptHandlers[1] = this->adc2;
   this->timerInterruptHandlers[0] = this->intervalCaller;
+  // this->timerInterruptHandlers[1] = this->intervalCaller_1khz;
 
   this->interruptHandler->registerAdc(this->adcInterruptHandlers,
                                       ADC_INTERRUPT_HANDLERS_NUM);
   this->interruptHandler->registerTimer(this->timerInterruptHandlers,
                                         TIMER_INTERRUPT_HANDLERS_NUM);
 
+  // HAL_UART_Receive_DMA(&huart2, uart_rx, 4);
+
   this->initialized = true;
 }
 
 void App::loop() {
-  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+  // HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
   if (!start_control &&
       HAL_GPIO_ReadPin(SW_GPIO_Port, SW_Pin) == GPIO_PIN_RESET) {
@@ -85,13 +99,16 @@ void App::loop() {
     current_observer_right->reset();
 
     pid_current->reset();
-    pid_speed->reset();
+    // pid_speed->reset();
+
+    // [-2.0000, -5.6814, -22.4525, -2.7583]
+    adaptive_controller->setInitialGains(-2.0000f, -5.6814f, -22.4525f,
+                                         -2.7583f);
+    adaptive_controller->setReferenceModel(10.0f, 0.7f);
+    adaptive_controller->reset();
 
     start_control = true;
   }
-
-  // printf("L %d, R %d\n", encoderLeftValue, encoderRightValue);
-  // printf("L %f, R %f\n", adc2->getCorrectedValues()->currentL,
 
   HAL_Delay(100);
 }
@@ -102,11 +119,16 @@ void App::interval() {
 
   if (!start_control) return;
 
-  // ADC1, 2の値取得
+  Adc1CorrectedValues *adc1_values = adc1->getCorrectedValues();
 
-  Adc1CorrectedValues *adc1_values;
-  adc1_values = adc1->getCorrectedValues();
+  float vin = adc1_values->mux_value[4] * 3.3 * ADC_TO_VOLTAGE;
 
+  float theta = -(float)(adc1_values->p_1 - zero_ad) * ADV_TO_RAD;
+  float theta_filtered = lpf_theta->update(theta);
+  float dtheta = (theta_filtered - prev_theta) / DT;
+  prev_theta = theta_filtered;
+
+  // ADC2の値取得
   Adc2CorrectedValues *adc2_values;
   adc2_values = adc2->getCorrectedValues();
 
@@ -118,7 +140,6 @@ void App::interval() {
   encoder_val_l = now_encoder_l;
   encoder_val_r = now_encoder_r;
 
-  // 車輪の位置
   float real_x_r = (float)encoder_val_r * PULSE_TO_POSITION;
   float real_x_l = (float)encoder_val_l * PULSE_TO_POSITION;
 
@@ -129,28 +150,9 @@ void App::interval() {
   // モーター軸の角速度を計算 [rad/s]（オブザーバー用）
   // エンコーダーはモーター軸に直接取り付けられているため、直接変換
   float motor_speed_left =
-      (float)(now_encoder_l - prev_encoder_l) * PULSE_TO_RAD / DT;
+      (float)(encoder_val_l - prev_encoder_l) * PULSE_TO_RAD / DT;
   float motor_speed_right =
-      (float)(now_encoder_r - prev_encoder_r) * PULSE_TO_RAD / DT;
-
-  prev_encoder_l = now_encoder_l;
-  prev_encoder_r = now_encoder_r;
-
-  // printf(">l:%d\n", current_encoder_l);
-  // printf(">r:%d\n", current_encoder_r);
-  // printf(">x:%f\n", x);
-
-  float theta = -(float)(adc1_values->p_1 - zero_ad) * ADV_TO_RAD;
-  float theta_filtered = lpf_theta->update(theta);
-  float dtheta = (theta_filtered - prev_theta) / DT;
-  prev_theta = theta_filtered;
-
-  // printf(">theta:%f\n", theta_filtered);
-
-  // 電圧指令値を計算（PWM値から実際の電圧に変換）
-  float vin = adc1_values->mux_value[4] * 3.3 * ADC_TO_VOLTAGE;
-
-  // printf(">vin:%f\n", vin);
+      (float)(encoder_val_r - prev_encoder_r) * PULSE_TO_RAD / DT;
 
   float voltage_left = prev_pwm_left * vin;
   float voltage_right = prev_pwm_right * vin;
@@ -161,35 +163,35 @@ void App::interval() {
   float measured_current_r =
       convertAdcToCurrent(adc2_values->currentR - offset_current_r);
 
-  // printf(">measured_l:%f\n", measured_current_l);
-  // printf(">measured_r:%f\n", measured_current_r);
-
   // オブザーバーを使用して正しい電流値を取得
   float corrected_current_l = current_observer_left->getCorrectedCurrent(
       measured_current_l, voltage_left, motor_speed_left);
   float corrected_current_r = current_observer_right->getCorrectedCurrent(
       measured_current_r, voltage_right, motor_speed_right);
 
-  // printf(">corrected_l:%f\n", corrected_current_l);
-  // printf(">corrected_r:%f\n", corrected_current_r);
-
   float current = (corrected_current_l + corrected_current_r) / 2.0f;
   float current_filtered = lpf_current->update(current);
 
-  // printf(">current_avg:%f\n", current);
-  // printf(">c:%f\n", current_filtered);
+  float reference_theta = 0.0f;  // Target pendulum angle (upright position)
+  float control_output = adaptive_controller->update(x, dx, theta_filtered,
+                                                     dtheta, reference_theta);
 
-  // [-1.4142, -5.3580, -20.9010, -2.5862]
-  float state_feedback_u =
-      x * -1.4142f + dx * -5.3580f + theta * -20.9010f + dtheta * -2.5862f;
+  // TODO
+  // uart_x = x;
+  // uart_theta = theta_filtered;
+  // control_output = uart_u;
 
-  // 力から直接電流指令に変換
   float force_to_current =
-      -state_feedback_u * (WHEEL_RADIUS / (GEAR_RATIO * Kt * 2.0f));
-
+      control_output * (WHEEL_RADIUS / (GEAR_RATIO * Kt * 2.0f));
   float u = pid_current->update(force_to_current, current_filtered) / vin;
 
-  // printf(">u:%f\n", u);
+  u = u * vin > 12.0f ? 12.0f / vin : u;
+  u = u * vin < -12.0f ? -12.0f / vin : u;
+
+  if (vin < 6.0f) {
+    // u = 0.0f;  // If voltage is too low, stop the motors
+    // printf("Low voltage: %f V, stopping motors.\n", vin);
+  }
 
   motors->setSpeedLeft(u);
   motors->setSpeedRight(u);
@@ -197,11 +199,59 @@ void App::interval() {
   // motors->setSpeedLeft(1.0f);
   // motors->setSpeedRight(1.0f);
 
-  // PWM指令値を保存（次回のオブザーバーで使用）
   prev_pwm_left = u;
   prev_pwm_right = u;
-
   prev_u = u;
 
-  // ADC1, 2の値のDMA読み取りを実施
+  // printf(">l:%d\n", encoder_val_l);
+  // printf(">r:%d\n", encoder_val_r);
+  // printf(">x:%f\n", x);
+  // printf(">theta:%f\n", theta_filtered);
+  // printf(">vin:%f\n", vin);
+  // printf(">measured_l:%f\n", measured_current_l);
+  // printf(">measured_r:%f\n", measured_current_r);
+  // printf(">voltage_l:%f\n", voltage_left);
+  // printf(">voltage_r:%f\n", voltage_right);
+  // printf(">current_avg:%f\n", current);
+  // printf(">current_filtered:%f\n", current_filtered);
+  // printf(">u:%f\n", u);
 }
+
+/*
+void App::interval_1khz() {
+   if (!start_control) return;
+
+   if (huart2.ErrorCode != HAL_UART_ERROR_NONE) {
+     // UARTエラーが発生した場合、エラーコードをリセット
+     // huart2.ErrorCode = HAL_UART_ERROR_NONE;
+     // huart2.gState = HAL_UART_STATE_READY;
+     // huart2.RxState = HAL_UART_STATE_READY;
+     // HAL_UART_Receive_DMA(&huart2, uart_rx, 4);  // 再度受信を開始
+   }
+
+   if (huart2.gState == HAL_UART_STATE_READY) {
+     float tx_data[2] = {uart_x, uart_theta};
+     uart_tx[0] = 0x90;
+     uart_tx[1] = 0x86;
+     for (int i = 0; i < 8; i++) {
+       uart_tx[i + 2] = ((uint8_t *)(&tx_data))[i];
+     }
+     HAL_UART_Transmit_DMA(&huart2, uart_tx, 10);
+   }
+ }
+
+ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+   if (huart->Instance == USART2) {
+     huart2.gState = HAL_UART_STATE_READY;
+   }
+ }
+
+ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+   if (huart->Instance == USART2) {
+     uart_u = *((float *)uart_rx);
+
+     HAL_UART_Receive_DMA(&huart2, uart_rx, 4);
+   }
+ }
+*/

@@ -19,4 +19,7 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 
+/build
+/build_pc
+
 /.claude/settings.local.json

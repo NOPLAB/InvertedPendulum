@@ -53,6 +53,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/App/Src/pid.cpp
     Core/App/Src/lpf.cpp
     Core/App/Src/motor_observer.cpp
+    Core/App/Src/mit_adaptive_controller.cpp
     Core/App/Lib/QEI/qei.c
 
     # Test sources (only when ENABLE_STM32_TESTS environment variable is set)
