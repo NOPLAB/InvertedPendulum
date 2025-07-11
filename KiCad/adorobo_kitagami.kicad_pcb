@@ -2890,7 +2890,7 @@
     (property "ki_keywords" "LED diode light-emitting-diode")
     (path "/69015e1b-50f3-4647-b70e-edc180038e6e/7b4ec99f-c872-40a1-b10c-879a3265dbd9")
     (attr smd)
-    (fp_text reference "D6" (at -2.875 0) (layer "F.SilkS" knockout)
+    (fp_text reference "D4" (at -2.875 0) (layer "F.SilkS" knockout)
         (effects (font (size 1 1) (thickness 0.15)))
       (tstamp a543ab32-ac09-4019-856f-b6b6a0f12fdc)
     )
