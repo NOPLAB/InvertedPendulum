@@ -74,11 +74,12 @@ pub const DT: f32 = 1.0 / 2000.0;
 pub const CONTROL_LOOP_FREQUENCY: u32 = 2000;
 pub const ADC_SAMPLING_FREQUENCY: u32 = 2000;
 
-// LQR State Feedback Gains (from C++ implementation)
-pub const K_POSITION: f32 = -3.1623;
-pub const K_VELOCITY: f32 = -8.4042;
-pub const K_ANGLE: f32 = -58.4769;
-pub const K_ANGULAR_VELOCITY: f32 = -11.7355;
+// LQR State Feedback Gains
+// [-10.0000, -9.2851, -33.0945, -4.2335]
+pub const K_POSITION: f32 = -10.0000;
+pub const K_VELOCITY: f32 = -9.2851;
+pub const K_ANGLE: f32 = -33.0945;
+pub const K_ANGULAR_VELOCITY: f32 = -4.2335;
 
 pub const FORCE_TO_CURRENT: f32 = WHEEL_RADIUS / (GEAR_RATIO * MOTOR_KT * 2.0);
 

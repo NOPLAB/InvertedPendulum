@@ -1,11 +1,10 @@
 use crate::constants::{self, *};
-use crate::fmt::info;
 use crate::lpf::LowPassFilter;
 use crate::mit_adaptive_controller::MitAdaptiveController;
 use crate::motor_observer::MotorObserver;
-use crate::pendulum_observer::{PendulumAngularVelocityObserver, PendulumParams};
+use crate::pendulum_observer::PendulumAngularVelocityObserver;
 use crate::pid::PidController;
-use crate::sensor::{self, SensorManager};
+use crate::sensor::SensorManager;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ControllerError {
