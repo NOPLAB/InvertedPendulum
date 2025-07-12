@@ -26,8 +26,8 @@ impl Motors {
         }
     }
 
-    pub fn set_duty_left(&mut self, speed: f32) {
-        let clamped_speed = self.clamp(speed, -1.0, 1.0);
+    pub fn set_duty_left(&mut self, duty: f32) {
+        let clamped_speed = self.clamp(duty, -1.0, 1.0);
         let duty_percent = (clamped_speed.abs() * 100.0) as u8;
 
         if clamped_speed > 0.0 {
@@ -42,8 +42,8 @@ impl Motors {
         }
     }
 
-    pub fn set_duty_right(&mut self, speed: f32) {
-        let clamped_speed = self.clamp(speed, -1.0, 1.0);
+    pub fn set_duty_right(&mut self, duty: f32) {
+        let clamped_speed = self.clamp(duty, -1.0, 1.0);
         let duty_percent = (clamped_speed.abs() * 100.0) as u8;
 
         if clamped_speed > 0.0 {
@@ -58,9 +58,9 @@ impl Motors {
         }
     }
 
-    pub fn set_duty_both(&mut self, left_speed: f32, right_speed: f32) {
-        self.set_duty_left(left_speed);
-        self.set_duty_right(right_speed);
+    pub fn set_duty_both(&mut self, left_duty: f32, right_duty: f32) {
+        self.set_duty_left(left_duty);
+        self.set_duty_right(right_duty);
     }
 
     pub fn stop(&mut self) {
