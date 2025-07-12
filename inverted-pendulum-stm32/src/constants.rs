@@ -1,3 +1,5 @@
+use crate::pendulum_observer::PendulumParams;
+
 // Motor constants (from C++ implementation)
 pub const MOTOR_KT: f32 = 0.0186; // Torque constant [Nm/A]
 pub const MOTOR_KE: f32 = 0.0186; // Back EMF constant [V·s/rad]
@@ -38,10 +40,10 @@ pub const ENCODER_RESOLUTION_RAD: f32 =
 pub const MAX_CURRENT: f32 = 10.0; // Maximum current [A]
 pub const MAX_VOLTAGE: f32 = 12.0; // Maximum voltage [V]
 pub const MAX_SPEED: f32 = 10.0; // Maximum speed [rad/s]
-pub const MAX_FORCE: f32 = 50.0; // Maximum control force [N]
+pub const MAX_FORCE: f32 = 10.0; // Maximum control force [N]
 
 // Filter constants (from C++ implementation)
-pub const CURRENT_FILTER_CUTOFF_FREQ: f32 = 1000.0; // Exact match to C++ CURRENT_FILTER_CUTOFF [Hz]
+pub const CURRENT_FILTER_CUTOFF_FREQ: f32 = 500.0; // Exact match to C++ CURRENT_FILTER_CUTOFF [Hz]
 pub const THETA_FILTER_CUTOFF_FREQ: f32 = 500.0; // Exact match to C++ THETA_FILTER_CUTOFF [Hz] (500Hz)
 pub const DEFAULT_FILTER_CUTOFF_FREQ: f32 = 100.0; // Default cutoff frequency [Hz]
 pub const DEFAULT_FILTER_GAIN: f32 = 1.0; // Default gain
@@ -68,9 +70,9 @@ pub const MULTIPLEXER_CHANNELS: usize = 8;
 pub const MOTOR_PWM_FREQUENCY: u32 = 100_000; // 100kHz PWM frequency
 
 // Timing constants (from C++ implementation)
-pub const DT: f32 = 1.0 / 1000.0;
-pub const CONTROL_LOOP_FREQUENCY: u32 = 1000;
-pub const ADC_SAMPLING_FREQUENCY: u32 = 1000;
+pub const DT: f32 = 1.0 / 2000.0;
+pub const CONTROL_LOOP_FREQUENCY: u32 = 2000;
+pub const ADC_SAMPLING_FREQUENCY: u32 = 2000;
 
 // LQR State Feedback Gains (from C++ implementation)
 pub const K_POSITION: f32 = -3.1623;
@@ -79,6 +81,14 @@ pub const K_ANGLE: f32 = -58.4769;
 pub const K_ANGULAR_VELOCITY: f32 = -11.7355;
 
 pub const FORCE_TO_CURRENT: f32 = WHEEL_RADIUS / (GEAR_RATIO * MOTOR_KT * 2.0);
+
+pub const PENDULUM_PARAMS: PendulumParams = PendulumParams {
+    length: 0.300,
+    mass: 0.2,
+    gravity: 9.81,
+    damping: 0.1,
+    cart_mass: 1.0,
+};
 
 // Math utilities
 pub fn calculate_alpha(cutoff_freq: f32, sample_time: f32) -> f32 {
@@ -96,16 +106,6 @@ pub fn clamp_f32(value: f32, min_val: f32, max_val: f32) -> f32 {
     }
 }
 
-// Angle conversion functions
-pub fn degrees_to_radians(degrees: f32) -> f32 {
-    degrees * core::f32::consts::PI / 180.0
-}
-
-pub fn radians_to_degrees(radians: f32) -> f32 {
-    radians * 180.0 / core::f32::consts::PI
-}
-
-// Convert ADC theta reading to radians (C++ style)
 pub fn adc_theta_to_radians(adc_value: f32, zero_offset: f32) -> f32 {
     -(adc_value - zero_offset) * ADC_TO_RAD
 }
@@ -114,17 +114,10 @@ pub fn adc_to_voltage(adc_value: u16) -> f32 {
     (adc_value as f32) * ADC_TO_VOLTAGE
 }
 
-pub fn voltage_to_current(voltage: f32) -> f32 {
-    (voltage - CURRENT_SENSOR_OFFSET) / CURRENT_SENSOR_SENSITIVITY
-}
-
-// C++ implementation current calculation (exact match)
-// C++ version: convertAdcToCurrent(float adcValue) where adcValue is normalized (0-1.0)
 pub fn convert_adc_to_current(adc_value: f32) -> f32 {
     adc_value * ADC_REFERENCE_VOLTAGE / AMPLIFICATION_FACTOR / SHUNT_REGISTER
 }
 
-// Convert raw ADC value to current - matches C++ flow
 pub fn adc_to_current(adc_value: u16) -> f32 {
     // First normalize to 0-1.0 range like C++
     let normalized_adc = (adc_value as f32) / (ADC_RESOLUTION as f32);
@@ -132,19 +125,8 @@ pub fn adc_to_current(adc_value: u16) -> f32 {
     convert_adc_to_current(normalized_adc)
 }
 
-// Convert encoder pulses to angle in radians
 pub fn pulses_to_angle_radians(pulses: i32) -> f32 {
     (pulses as f32) * ENCODER_RESOLUTION_RAD
-}
-
-// Convert angle in radians to encoder pulses
-pub fn angle_radians_to_pulses(angle_radians: f32) -> i32 {
-    (angle_radians / ENCODER_RESOLUTION_RAD) as i32
-}
-
-// Deprecated: keeping for compatibility, but using radians internally
-pub fn pulses_to_angle_degrees(pulses: i32) -> f32 {
-    radians_to_degrees(pulses_to_angle_radians(pulses))
 }
 
 // C++ implementation position calculation (exact match)

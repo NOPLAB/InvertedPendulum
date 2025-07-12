@@ -1,8 +1,9 @@
 use crate::constants::*;
 use crate::lpf::LowPassFilter;
 use core::cell::RefCell;
+use embassy_futures::join::join;
 use embassy_stm32::{adc::Adc, gpio::Output, peripherals};
-use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, mutex::Mutex};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_time::{Duration, Ticker};
 
 /// ADC1 with multiplexer support (3 channels + 8 multiplexed channels)
@@ -12,11 +13,6 @@ pub struct Adc1Manager {
     multiplexer_ch_b: Output<'static>,
     multiplexer_ch_c: Output<'static>,
     multiplexer_counter: usize,
-
-    // Filters for each channel
-    theta1_filter: LowPassFilter,
-    theta2_filter: LowPassFilter,
-    multiplexer_filters: [LowPassFilter; MULTIPLEXER_CHANNELS],
 
     // Calibration offsets
     theta1_offset: f32,
@@ -47,10 +43,6 @@ impl Adc1Manager {
             multiplexer_ch_b,
             multiplexer_ch_c,
             multiplexer_counter: 0,
-            theta1_filter: LowPassFilter::new(sample_time, THETA_FILTER_CUTOFF_FREQ, 1.0),
-            theta2_filter: LowPassFilter::new(sample_time, THETA_FILTER_CUTOFF_FREQ, 1.0),
-            multiplexer_filters: [LowPassFilter::new(sample_time, DEFAULT_FILTER_CUTOFF_FREQ, 1.0);
-                MULTIPLEXER_CHANNELS],
             theta1_offset: 0.0,
             theta2_offset: 0.0,
             multiplexer_offsets: [0.0; MULTIPLEXER_CHANNELS],
@@ -86,14 +78,7 @@ impl Adc1Manager {
         let multiplexer_calibrated =
             multiplexer_voltage - self.multiplexer_offsets[self.multiplexer_counter];
 
-        // Apply filters
-        let theta1_filtered = self.theta1_filter.update(theta1_calibrated);
-        let theta2_filtered = self.theta2_filter.update(theta2_calibrated);
-        let multiplexer_filtered =
-            self.multiplexer_filters[self.multiplexer_counter].update(multiplexer_calibrated);
-
         // Store multiplexer data (C++ style - keep all channels)
-        self.multiplexer_values[self.multiplexer_counter] = multiplexer_filtered;
         self.multiplexer_raw_values[self.multiplexer_counter] = multiplexer_raw;
 
         // Update multiplexer channel for next read
@@ -104,14 +89,9 @@ impl Adc1Manager {
             self.update_calibration(theta1_voltage, theta2_voltage, multiplexer_voltage);
         }
 
-        /*         info!(
-                   "ADC1 Read: theta1: {} V, theta2: {} V, multiplexer: {} V, channel: {}",
-                   theta1_voltage, theta2_voltage, multiplexer_voltage, self.multiplexer_counter
-               );
-        */
         Adc1Data {
-            theta0: theta1_filtered,
-            theta1: theta2_filtered,
+            theta0: theta1_calibrated,
+            theta1: theta2_calibrated,
             multiplexer: self.multiplexer_values, // Return all multiplexer values
         }
     }
@@ -159,10 +139,12 @@ impl Adc1Manager {
             self.theta2_offset = self.calibration_sums[1] / (CALIBRATION_SAMPLES as f32);
 
             // Disable multiplexer channel offsets for now
-            /* for i in 0..MULTIPLEXER_CHANNELS {
+            /*
+            for i in 0..MULTIPLEXER_CHANNELS {
                 self.multiplexer_offsets[i] = self.calibration_sums[2 + i]
                     / (CALIBRATION_SAMPLES as f32 / MULTIPLEXER_CHANNELS as f32);
-            } */
+            }
+            */
 
             self.is_calibrated = true;
         }
@@ -181,22 +163,6 @@ impl Adc1Manager {
     pub fn get_calibration_progress(&self) -> f32 {
         const CALIBRATION_SAMPLES: u32 = 1000;
         (self.calibration_samples as f32) / (CALIBRATION_SAMPLES as f32)
-    }
-
-    pub fn set_filter_cutoff(&mut self, cutoff_freq: f32) {
-        self.theta1_filter.set_cutoff_frequency(cutoff_freq);
-        self.theta2_filter.set_cutoff_frequency(cutoff_freq);
-        for filter in &mut self.multiplexer_filters {
-            filter.set_cutoff_frequency(cutoff_freq);
-        }
-    }
-
-    pub fn reset_filters(&mut self) {
-        self.theta1_filter.reset();
-        self.theta2_filter.reset();
-        for filter in &mut self.multiplexer_filters {
-            filter.reset();
-        }
     }
 
     pub fn get_offsets(&self) -> (f32, f32, [f32; MULTIPLEXER_CHANNELS]) {
@@ -435,7 +401,7 @@ impl Default for AdcData {
 }
 
 /// Global ADC state for sharing between tasks
-pub static ADC_DATA: Mutex<ThreadModeRawMutex, RefCell<AdcData>> =
+pub static ADC_DATA: Mutex<CriticalSectionRawMutex, RefCell<AdcData>> =
     Mutex::new(RefCell::new(AdcData {
         adc1: Adc1Data {
             theta0: 0.0,
@@ -464,12 +430,11 @@ pub async fn adc_task(
 
     loop {
         // Read ADC channels
-        let adc1_data = adc1_manager
-            .read_channels(&mut theta1_pin, &mut theta2_pin, &mut multiplexer_pin)
-            .await;
-        let adc2_data = adc2_manager
-            .read_currents(&mut current_r_pin, &mut current_l_pin)
-            .await;
+        let (adc1_data, adc2_data) = join(
+            adc1_manager.read_channels(&mut theta1_pin, &mut theta2_pin, &mut multiplexer_pin),
+            adc2_manager.read_currents(&mut current_r_pin, &mut current_l_pin),
+        )
+        .await;
 
         // Combine ADC data
         let combined_data = AdcData {

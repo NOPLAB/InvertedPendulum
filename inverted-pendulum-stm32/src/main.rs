@@ -8,6 +8,7 @@ mod lpf;
 mod mit_adaptive_controller;
 mod motor;
 mod motor_observer;
+mod pendulum_observer;
 mod pid;
 mod sensor;
 
@@ -95,7 +96,7 @@ async fn main(spawner: Spawner) {
 
     // ADC1
     let mut adc1 = Adc::new(p.ADC1, Irqs);
-    adc1.set_sample_time(embassy_stm32::adc::SampleTime::CYCLES601_5);
+    adc1.set_sample_time(embassy_stm32::adc::SampleTime::CYCLES181_5);
 
     let multiplexer_ch_a = Output::new(p.PB4, Level::Low, Speed::Low);
     let multiplexer_ch_b = Output::new(p.PB3, Level::Low, Speed::Low);
@@ -103,7 +104,7 @@ async fn main(spawner: Spawner) {
 
     // ADC2
     let mut adc2 = Adc::new(p.ADC2, Irqs);
-    adc2.set_sample_time(embassy_stm32::adc::SampleTime::CYCLES601_5);
+    adc2.set_sample_time(embassy_stm32::adc::SampleTime::CYCLES181_5);
 
     let sample_time = 1.0 / ADC_SAMPLING_FREQUENCY as f32;
     let adc1_manager = Adc1Manager::new(
@@ -208,7 +209,7 @@ async fn main(spawner: Spawner) {
 async fn qei_encoder_r(mut qei: Qei<'static>) {
     loop {
         let encode_result = qei.run().await;
-        qei.reset().await;
+        qei.reset();
 
         let prev_value = QEI_R_PULSES.load(Ordering::Relaxed);
         QEI_R_PULSES.store(prev_value + encode_result.pulses, Ordering::Relaxed);
@@ -219,7 +220,7 @@ async fn qei_encoder_r(mut qei: Qei<'static>) {
 async fn qei_encoder_l(mut qei: Qei<'static>) {
     loop {
         let encode_result = qei.run().await;
-        qei.reset().await;
+        qei.reset();
 
         let prev_value = QEI_L_PULSES.load(Ordering::Relaxed);
         QEI_L_PULSES.store(prev_value + encode_result.pulses, Ordering::Relaxed);
@@ -231,8 +232,7 @@ async fn control_task(mut motors: Motors) {
     let mut ticker = Ticker::every(Duration::from_hz(CONTROL_LOOP_FREQUENCY as u64));
 
     let mut sensor_data = SensorManager::new(1.0 / CONTROL_LOOP_FREQUENCY as f32);
-    let mut controller_system = ControllerSystem::new_lqr();
-
+    let mut controller_system = ControllerSystem::new_adaptive(1.0 / CONTROL_LOOP_FREQUENCY as f32);
     controller_system.reset();
 
     loop {

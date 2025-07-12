@@ -1,7 +1,6 @@
 use core::cell::RefCell;
 use embassy_futures::select;
 use embassy_stm32::exti::ExtiInput;
-use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, mutex::Mutex};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum QeiEncoding {
@@ -79,7 +78,7 @@ impl<'a> Qei<'a> {
         self.state
     }
 
-    pub async fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.state.pulses = 0;
         self.state.revolutions = 0;
     }

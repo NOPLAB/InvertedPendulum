@@ -3,6 +3,7 @@ use crate::fmt::info;
 use crate::lpf::LowPassFilter;
 use crate::mit_adaptive_controller::MitAdaptiveController;
 use crate::motor_observer::MotorObserver;
+use crate::pendulum_observer::{PendulumAngularVelocityObserver, PendulumParams};
 use crate::pid::PidController;
 use crate::sensor::{self, SensorManager};
 
@@ -15,47 +16,6 @@ pub enum ControllerError {
 pub struct ControllerOutputs {
     pub duty_l: f32, // Left motor duty cycle command [0.0 - 1.0]
     pub duty_r: f32, // Right motor duty cycle command [0.0 - 1.0]
-}
-
-/// Control force output structure
-/// Represents the output of high-level controllers (LQR, Adaptive, etc.)
-#[derive(Debug, Clone, Copy)]
-pub struct ControlForce {
-    pub force: f32, // Control force [N]l
-}
-
-impl ControlForce {
-    pub fn new() -> Self {
-        Self { force: 0.0 }
-    }
-
-    pub fn from_force(force: f32) -> Self {
-        Self { force }
-    }
-}
-
-/// Current command structure
-/// Represents the output of force-to-current conversion
-#[derive(Debug, Clone, Copy)]
-pub struct CurrentCommand {
-    pub current_l: f32, // Left motor current reference [A]
-    pub current_r: f32, // Right motor current reference [A]
-}
-
-impl CurrentCommand {
-    pub fn new() -> Self {
-        Self {
-            current_l: 0.0,
-            current_r: 0.0,
-        }
-    }
-
-    pub fn from_currents(current_l: f32, current_r: f32) -> Self {
-        Self {
-            current_l,
-            current_r,
-        }
-    }
 }
 
 /// Controller references structure
@@ -85,7 +45,7 @@ pub trait HighLevelController {
         &mut self,
         sensor_data: &SensorManager,
         references: &ControlReferences,
-    ) -> Result<ControlForce, ControllerError>;
+    ) -> Result<f32, ControllerError>;
 
     fn reset(&mut self);
     fn set_parameters(&mut self, params: &[f32]);
@@ -102,6 +62,8 @@ pub struct LqrController {
     theta_filter: LowPassFilter,
     prev_filtered_theta: f32,
     theta_velocity: f32,
+    pendulum_observer: PendulumAngularVelocityObserver,
+    prev_force: f32,
 }
 
 impl LqrController {
@@ -114,6 +76,8 @@ impl LqrController {
             theta_filter: LowPassFilter::new(DT, THETA_FILTER_CUTOFF_FREQ, 1.0),
             prev_filtered_theta: 0.0,
             theta_velocity: 0.0,
+            pendulum_observer: PendulumAngularVelocityObserver::new(PENDULUM_PARAMS, DT),
+            prev_force: 0.0,
         }
     }
 
@@ -126,6 +90,8 @@ impl LqrController {
             theta_filter: LowPassFilter::new(DT, THETA_FILTER_CUTOFF_FREQ, 1.0),
             prev_filtered_theta: 0.0,
             theta_velocity: 0.0,
+            pendulum_observer: PendulumAngularVelocityObserver::new(PENDULUM_PARAMS, DT),
+            prev_force: 0.0,
         }
     }
 }
@@ -135,7 +101,7 @@ impl HighLevelController for LqrController {
         &mut self,
         sensor_data: &SensorManager,
         references: &ControlReferences,
-    ) -> Result<ControlForce, ControllerError> {
+    ) -> Result<f32, ControllerError> {
         // Calculate state variables
         let position = (sensor_data.position_r + sensor_data.position_l) / 2.0;
         let velocity = (sensor_data.velocity_r + sensor_data.velocity_l) / 2.0;
@@ -147,11 +113,6 @@ impl HighLevelController for LqrController {
 
         let angle = filtered_theta; // ADC側で符号処理済み
         let angular_velocity = self.theta_velocity;
-
-        info!(
-            "position: {}, velocity: {}, angle: {}, angular_velocity: {}",
-            position, velocity, angle, angular_velocity
-        );
 
         // Calculate state errors
         let position_error = position - references.position_ref;
@@ -168,7 +129,9 @@ impl HighLevelController for LqrController {
         // Apply force limits
         let limited_force = clamp_f32(control_force, -MAX_FORCE, MAX_FORCE);
 
-        Ok(ControlForce::from_force(limited_force))
+        self.prev_force = limited_force;
+
+        Ok(limited_force)
     }
 
     fn reset(&mut self) {
@@ -216,7 +179,7 @@ impl HighLevelController for AdaptiveController {
         &mut self,
         sensor_data: &SensorManager,
         references: &ControlReferences,
-    ) -> Result<ControlForce, ControllerError> {
+    ) -> Result<f32, ControllerError> {
         let x = (sensor_data.position_r + sensor_data.position_l) / 2.0;
         let dx = (sensor_data.velocity_r + sensor_data.velocity_l) / 2.0;
         let theta = self.theta_filter.update(sensor_data.theta0);
@@ -227,6 +190,11 @@ impl HighLevelController for AdaptiveController {
 
         let dtheta = self.theta_velocity;
 
+        /* info!(
+            "position: {}, velocity: {}, angle: {}, angular_velocity: {}",
+            x, dx, theta, dtheta
+        ); */
+
         // MIT Adaptive control - outputs force directly
         let control_force = self
             .controller
@@ -235,7 +203,7 @@ impl HighLevelController for AdaptiveController {
         // Apply force limits
         let limited_force = clamp_f32(control_force, -MAX_FORCE, MAX_FORCE);
 
-        Ok(ControlForce::from_force(limited_force))
+        Ok(limited_force)
     }
 
     fn reset(&mut self) {
@@ -310,7 +278,8 @@ impl CurrentController {
 
     pub fn current_to_duty(
         &mut self,
-        current_cmd: CurrentCommand,
+        target_current_l: f32,
+        target_current_r: f32,
         measured_current_l: f32,
         measured_current_r: f32,
         motor_speed_l: f32,
@@ -337,12 +306,8 @@ impl CurrentController {
         // PID control for current regulation using filtered current
         // C++: float u = pid_current->update(force_to_current, current_filtered) / vin;
         // Note: C++ uses (setpoint, measurement) order
-        let voltage_l = self
-            .pid_left
-            .update(current_cmd.current_l, filtered_current_l);
-        let voltage_r = self
-            .pid_right
-            .update(current_cmd.current_r, filtered_current_r);
+        let voltage_l = self.pid_left.update(target_current_l, filtered_current_l);
+        let voltage_r = self.pid_right.update(target_current_r, filtered_current_r);
 
         // Apply voltage limits before duty cycle conversion (match C++ implementation)
         let limited_voltage_l = clamp_f32(voltage_l, -MAX_VOLTAGE, MAX_VOLTAGE);
@@ -438,19 +403,14 @@ impl ControllerSystem {
             }
         };
 
-        // Step 2: Convert force to current command
-        let current_cmd = CurrentCommand::from_currents(
-            control_force.force * constants::FORCE_TO_CURRENT,
-            control_force.force * constants::FORCE_TO_CURRENT,
-        );
-
         // test
         // let current_cmd = CurrentCommand::from_currents(0.1, 0.1);
         // let current_cmd = CurrentCommand::from_currents(sensor_data.theta0, sensor_data.theta0);
 
         // Step 3: Current controller computes voltage
         let control_outputs = self.current_controller.current_to_duty(
-            current_cmd,
+            control_force * constants::FORCE_TO_CURRENT,
+            control_force * constants::FORCE_TO_CURRENT,
             sensor_data.current_l,
             sensor_data.current_r,
             sensor_data.motor_speed_l,
