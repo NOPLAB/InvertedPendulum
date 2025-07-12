@@ -41,10 +41,8 @@ pub const MAX_SPEED: f32 = 10.0; // Maximum speed [rad/s]
 pub const MAX_FORCE: f32 = 50.0; // Maximum control force [N]
 
 // Filter constants (from C++ implementation)
-pub const THETA_FILTER_CUTOFF: f32 = 50.0; // Exact match to C++ THETA_FILTER_CUTOFF [Hz]
-pub const CURRENT_FILTER_CUTOFF: f32 = 1000.0; // Exact match to C++ CURRENT_FILTER_CUTOFF [Hz]
-pub const THETA_FILTER_CUTOFF_FREQ: f32 = 50.0; // Theta filter cutoff frequency [Hz] (compatibility)
-pub const CURRENT_FILTER_CUTOFF_FREQ: f32 = 1000.0; // Current filter cutoff frequency [Hz] (compatibility)
+pub const CURRENT_FILTER_CUTOFF_FREQ: f32 = 1000.0; // Exact match to C++ CURRENT_FILTER_CUTOFF [Hz]
+pub const THETA_FILTER_CUTOFF_FREQ: f32 = 500.0; // Exact match to C++ THETA_FILTER_CUTOFF [Hz] (500Hz)
 pub const DEFAULT_FILTER_CUTOFF_FREQ: f32 = 100.0; // Default cutoff frequency [Hz]
 pub const DEFAULT_FILTER_GAIN: f32 = 1.0; // Default gain
 
@@ -70,9 +68,17 @@ pub const MULTIPLEXER_CHANNELS: usize = 8;
 pub const MOTOR_PWM_FREQUENCY: u32 = 100_000; // 100kHz PWM frequency
 
 // Timing constants (from C++ implementation)
-pub const DT: f32 = 1.0 / 1_000.0; // 10kHz sampling rate (exact match to C++)
-pub const CONTROL_LOOP_FREQUENCY: u32 = 1_000; // 10kHz control loop (updated to match C++)
-pub const ADC_SAMPLING_FREQUENCY: u32 = 1_000; // 10kHz ADC sampling (updated to match C++)
+pub const DT: f32 = 1.0 / 1000.0;
+pub const CONTROL_LOOP_FREQUENCY: u32 = 1000;
+pub const ADC_SAMPLING_FREQUENCY: u32 = 1000;
+
+// LQR State Feedback Gains (from C++ implementation)
+pub const K_POSITION: f32 = -3.1623;
+pub const K_VELOCITY: f32 = -8.4042;
+pub const K_ANGLE: f32 = -58.4769;
+pub const K_ANGULAR_VELOCITY: f32 = -11.7355;
+
+pub const FORCE_TO_CURRENT: f32 = WHEEL_RADIUS / (GEAR_RATIO * MOTOR_KT * 2.0);
 
 // Math utilities
 pub fn calculate_alpha(cutoff_freq: f32, sample_time: f32) -> f32 {
@@ -148,9 +154,3 @@ pub const PULSE_TO_POSITION: f32 =
 pub fn pulses_to_position(pulses: i32) -> f32 {
     (pulses as f32) * PULSE_TO_POSITION
 }
-
-// LQR State Feedback Gains (from C++ implementation)
-pub const K_POSITION: f32 = -3.1623;
-pub const K_VELOCITY: f32 = -8.4042;
-pub const K_ANGLE: f32 = -58.4769;
-pub const K_ANGULAR_VELOCITY: f32 = -11.7355;

@@ -11,13 +11,8 @@ mod motor_observer;
 mod pid;
 mod sensor;
 
-use core::{
-    cell::RefCell,
-    sync::atomic::{AtomicI32, Ordering},
-};
+use core::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 
-use embassy_futures::select;
-use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, mutex::Mutex};
 #[cfg(not(feature = "defmt"))]
 use panic_halt as _;
 
@@ -25,7 +20,7 @@ use crate::{
     controller::ControllerSystem,
     sensor::{
         adc::{adc_task, Adc1Manager, Adc2Manager, ADC_DATA},
-        qei::{Qei, QeiEncoding, QeiResult},
+        qei::{Qei, QeiEncoding},
         SensorManager,
     },
 };
@@ -45,7 +40,7 @@ use embassy_stm32::{
     time::Hertz,
     timer::simple_pwm::{PwmPin, SimplePwm},
 };
-use embassy_time::{Duration, Instant, Ticker, Timer};
+use embassy_time::{Duration, Ticker, Timer};
 use fmt::info;
 use motor::Motors;
 
@@ -56,6 +51,7 @@ bind_interrupts!(struct Irqs {
 
 static QEI_R_PULSES: AtomicI32 = AtomicI32::new(0);
 static QEI_L_PULSES: AtomicI32 = AtomicI32::new(0);
+static START_CONTROL: AtomicBool = AtomicBool::new(false);
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -195,12 +191,14 @@ async fn main(spawner: Spawner) {
 
     loop {
         led.set_high();
-        Timer::after(Duration::from_millis(500)).await;
+        Timer::after(Duration::from_millis(100)).await;
         led.set_low();
-        Timer::after(Duration::from_millis(500)).await;
+        Timer::after(Duration::from_millis(100)).await;
 
         // Check button state
-        if button.is_low() {}
+        if button.is_low() {
+            START_CONTROL.store(true, Ordering::Relaxed);
+        }
     }
 }
 
@@ -235,8 +233,10 @@ async fn control_task(mut motors: Motors) {
     let mut sensor_data = SensorManager::new(1.0 / CONTROL_LOOP_FREQUENCY as f32);
     let mut controller_system = ControllerSystem::new_lqr();
 
+    controller_system.reset();
+
     loop {
-        {
+        if START_CONTROL.load(Ordering::Relaxed) {
             let adc_data = ADC_DATA.lock().await;
 
             sensor_data.update(
@@ -248,15 +248,12 @@ async fn control_task(mut motors: Motors) {
             let result = controller_system.compute_control(&sensor_data);
 
             if let Ok(output) = result {
-                motors.set_duty_both(0.0, output.duty_r);
-                /* info!(
-                    "Control Output: Duty L: {}%, Duty R: {}%",
-                    (output.duty_l * 100.0) as i32,
-                    (output.duty_r * 100.0) as i32,
-                ); */
+                motors.set_duty_both(output.duty_l, output.duty_r);
             } else {
                 info!("Control computation failed");
             }
+        } else {
+            motors.stop();
         }
 
         ticker.next().await;

@@ -31,20 +31,6 @@ impl LowPassFilter {
         }
     }
 
-    /// Create a new low-pass filter with custom sample time
-    pub fn new_with_sample_time(cutoff_freq: f32, gain: f32, sample_time: f32) -> Self {
-        let alpha = calculate_alpha(cutoff_freq, sample_time);
-
-        Self {
-            alpha,
-            gain,
-            cutoff_freq,
-            sample_time,
-            output: 0.0,
-            initialized: false,
-        }
-    }
-
     /// Process a single input sample through the filter
     pub fn update(&mut self, input: f32) -> f32 {
         if !self.initialized {
@@ -126,6 +112,13 @@ impl LowPassFilter {
         for (input, output) in inputs.iter().zip(outputs.iter_mut()) {
             *output = self.update(*input);
         }
+    }
+
+    /// Set the time constant (recalculates cutoff frequency)
+    pub fn set_time_constant(&mut self, time_constant: f32) {
+        // Convert time constant to cutoff frequency
+        let cutoff_freq = 1.0 / (2.0 * core::f32::consts::PI * time_constant);
+        self.set_cutoff_frequency(cutoff_freq);
     }
 
     /// Get the filter's frequency response at a given frequency

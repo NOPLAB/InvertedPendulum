@@ -4,7 +4,7 @@ use crate::lpf::LowPassFilter;
 use crate::mit_adaptive_controller::MitAdaptiveController;
 use crate::motor_observer::MotorObserver;
 use crate::pid::PidController;
-use crate::sensor::SensorManager;
+use crate::sensor::{self, SensorManager};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ControllerError {
@@ -21,34 +21,16 @@ pub struct ControllerOutputs {
 /// Represents the output of high-level controllers (LQR, Adaptive, etc.)
 #[derive(Debug, Clone, Copy)]
 pub struct ControlForce {
-    pub force: f32,    // Control force [N]
-    pub torque_l: f32, // Left motor torque [Nm] - for individual motor control
-    pub torque_r: f32, // Right motor torque [Nm] - for individual motor control
+    pub force: f32, // Control force [N]l
 }
 
 impl ControlForce {
     pub fn new() -> Self {
-        Self {
-            force: 0.0,
-            torque_l: 0.0,
-            torque_r: 0.0,
-        }
+        Self { force: 0.0 }
     }
 
     pub fn from_force(force: f32) -> Self {
-        Self {
-            force,
-            torque_l: 0.0,
-            torque_r: 0.0,
-        }
-    }
-
-    pub fn from_torques(torque_l: f32, torque_r: f32) -> Self {
-        Self {
-            force: 0.0,
-            torque_l,
-            torque_r,
-        }
+        Self { force }
     }
 }
 
@@ -79,8 +61,8 @@ impl CurrentCommand {
 /// Controller references structure
 #[derive(Debug, Clone, Copy)]
 pub struct ControlReferences {
-    pub theta1_ref: f32,   // Pendulum angle 1 reference [rad]
-    pub theta2_ref: f32,   // Pendulum angle 2 reference [rad]
+    pub theta0_ref: f32,   // Pendulum angle 1 reference [rad]
+    pub theta1_ref: f32,   // Pendulum angle 2 reference [rad]
     pub position_ref: f32, // Position reference [m]
     pub velocity_ref: f32, // Velocity reference [m/s]
 }
@@ -88,8 +70,8 @@ pub struct ControlReferences {
 impl ControlReferences {
     pub fn new() -> Self {
         Self {
+            theta0_ref: 0.0,
             theta1_ref: 0.0,
-            theta2_ref: 0.0,
             position_ref: 0.0,
             velocity_ref: 0.0,
         }
@@ -117,6 +99,9 @@ pub struct LqrController {
     k_velocity: f32,
     k_angle: f32,
     k_angular_velocity: f32,
+    theta_filter: LowPassFilter,
+    prev_filtered_theta: f32,
+    theta_velocity: f32,
 }
 
 impl LqrController {
@@ -126,6 +111,9 @@ impl LqrController {
             k_velocity: K_VELOCITY,
             k_angle: K_ANGLE,
             k_angular_velocity: K_ANGULAR_VELOCITY,
+            theta_filter: LowPassFilter::new(DT, THETA_FILTER_CUTOFF_FREQ, 1.0),
+            prev_filtered_theta: 0.0,
+            theta_velocity: 0.0,
         }
     }
 
@@ -135,6 +123,9 @@ impl LqrController {
             k_velocity: k_vel,
             k_angle: k_angle,
             k_angular_velocity: k_angular_vel,
+            theta_filter: LowPassFilter::new(DT, THETA_FILTER_CUTOFF_FREQ, 1.0),
+            prev_filtered_theta: 0.0,
+            theta_velocity: 0.0,
         }
     }
 }
@@ -148,13 +139,24 @@ impl HighLevelController for LqrController {
         // Calculate state variables
         let position = (sensor_data.position_r + sensor_data.position_l) / 2.0;
         let velocity = (sensor_data.velocity_r + sensor_data.velocity_l) / 2.0;
-        let angle = sensor_data.theta0;
-        let angular_velocity = sensor_data.theta0_velocity;
+        let filtered_theta = self.theta_filter.update(sensor_data.theta0);
+
+        // Calculate theta velocity from filtered theta derivative
+        self.theta_velocity = (filtered_theta - self.prev_filtered_theta) / DT;
+        self.prev_filtered_theta = filtered_theta;
+
+        let angle = filtered_theta; // ADC側で符号処理済み
+        let angular_velocity = self.theta_velocity;
+
+        info!(
+            "position: {}, velocity: {}, angle: {}, angular_velocity: {}",
+            position, velocity, angle, angular_velocity
+        );
 
         // Calculate state errors
         let position_error = position - references.position_ref;
         let velocity_error = velocity - references.velocity_ref;
-        let angle_error = angle - references.theta1_ref;
+        let angle_error = angle - references.theta0_ref;
         let angular_velocity_error = angular_velocity;
 
         // LQR state feedback: u = -K*x (force output)
@@ -170,7 +172,9 @@ impl HighLevelController for LqrController {
     }
 
     fn reset(&mut self) {
-        // LQR controller is stateless, no reset needed
+        self.theta_filter.reset();
+        self.prev_filtered_theta = 0.0;
+        self.theta_velocity = 0.0;
     }
 
     fn set_parameters(&mut self, params: &[f32]) {
@@ -188,6 +192,9 @@ impl HighLevelController for LqrController {
 #[derive(Debug)]
 pub struct AdaptiveController {
     controller: MitAdaptiveController,
+    theta_filter: LowPassFilter,
+    prev_filtered_theta: f32,
+    theta_velocity: f32,
 }
 
 impl AdaptiveController {
@@ -195,7 +202,12 @@ impl AdaptiveController {
         let mut controller = MitAdaptiveController::new(sample_time);
         controller.set_initial_gains(-2.0000, -5.6814, -22.4525, -2.75834);
         controller.set_reference_model(10.0, 0.7);
-        Self { controller }
+        Self {
+            controller,
+            theta_filter: LowPassFilter::new(sample_time, THETA_FILTER_CUTOFF_FREQ, 1.0),
+            prev_filtered_theta: 0.0,
+            theta_velocity: 0.0,
+        }
     }
 }
 
@@ -207,13 +219,18 @@ impl HighLevelController for AdaptiveController {
     ) -> Result<ControlForce, ControllerError> {
         let x = (sensor_data.position_r + sensor_data.position_l) / 2.0;
         let dx = (sensor_data.velocity_r + sensor_data.velocity_l) / 2.0;
-        let theta = sensor_data.theta0;
-        let dtheta = sensor_data.theta0_velocity;
+        let theta = self.theta_filter.update(sensor_data.theta0);
+
+        // Calculate theta velocity from filtered theta derivative
+        self.theta_velocity = (theta - self.prev_filtered_theta) / DT;
+        self.prev_filtered_theta = theta;
+
+        let dtheta = self.theta_velocity;
 
         // MIT Adaptive control - outputs force directly
         let control_force = self
             .controller
-            .update(x, dx, theta, dtheta, references.theta1_ref);
+            .update(x, dx, theta, dtheta, references.theta0_ref);
 
         // Apply force limits
         let limited_force = clamp_f32(control_force, -MAX_FORCE, MAX_FORCE);
@@ -223,49 +240,15 @@ impl HighLevelController for AdaptiveController {
 
     fn reset(&mut self) {
         self.controller.reset();
+        self.theta_filter.reset();
+        self.prev_filtered_theta = 0.0;
+        self.theta_velocity = 0.0;
     }
 
     fn set_parameters(&mut self, params: &[f32]) {
         if params.len() >= 4 {
             self.controller
                 .set_initial_gains(params[0], params[1], params[2], params[3]);
-        }
-    }
-}
-
-/// Force-to-Current Converter
-/// Converts control force to current commands using motor/mechanical parameters
-pub struct ForceToCurrentConverter {
-    wheel_radius: f32,
-    gear_ratio: f32,
-    motor_kt: f32,
-    num_motors: f32,
-}
-
-impl ForceToCurrentConverter {
-    pub fn new() -> Self {
-        Self {
-            wheel_radius: WHEEL_RADIUS,
-            gear_ratio: GEAR_RATIO,
-            motor_kt: MOTOR_KT,
-            num_motors: 2.0, // Two motors (matches C++ implementation)
-        }
-    }
-
-    /// Convert control force to current command
-    /// Formula: I = F * (R / (G * Kt * N)) - exact match to C++ implementation
-    /// C++: force_to_current = control_output * (WHEEL_RADIUS / (GEAR_RATIO * Kt * 2.0f))
-    pub fn force_to_current(&self, control_force: ControlForce) -> CurrentCommand {
-        if control_force.force != 0.0 {
-            // Convert force to current (both motors get same current) - exact match to C++
-            let current =
-                control_force.force * (self.wheel_radius / (self.gear_ratio * self.motor_kt * 2.0));
-            CurrentCommand::from_currents(current, current)
-        } else {
-            // Individual torque control
-            let current_l = control_force.torque_l / self.motor_kt;
-            let current_r = control_force.torque_r / self.motor_kt;
-            CurrentCommand::from_currents(current_l, current_r)
         }
     }
 }
@@ -280,6 +263,8 @@ pub struct CurrentController {
     observer_right: MotorObserver,
     current_filter_left: LowPassFilter,
     current_filter_right: LowPassFilter,
+    prev_voltage_l: f32,
+    prev_voltage_r: f32,
 }
 
 impl CurrentController {
@@ -308,8 +293,8 @@ impl CurrentController {
         let observer_right = MotorObserver::new(DT);
 
         // Create current filters to match C++ implementation (1000Hz cutoff)
-        let current_filter_left = LowPassFilter::new(DT, CURRENT_FILTER_CUTOFF, 1.0);
-        let current_filter_right = LowPassFilter::new(DT, CURRENT_FILTER_CUTOFF, 1.0);
+        let current_filter_left = LowPassFilter::new(DT, CURRENT_FILTER_CUTOFF_FREQ, 1.0);
+        let current_filter_right = LowPassFilter::new(DT, CURRENT_FILTER_CUTOFF_FREQ, 1.0);
 
         Self {
             pid_left,
@@ -318,6 +303,8 @@ impl CurrentController {
             observer_right,
             current_filter_left,
             current_filter_right,
+            prev_voltage_l: 0.0,
+            prev_voltage_r: 0.0,
         }
     }
 
@@ -330,14 +317,22 @@ impl CurrentController {
         motor_speed_r: f32,
         vin_voltage: f32,
     ) -> ControllerOutputs {
-        /* info!(
-            "CurrentController: measured_current_l: {}, measured_current_r: {}, vin_voltage: {}",
-            measured_current_l, measured_current_r, vin_voltage
-        ); */
+        // CORRECTED: Apply motor observer first, then filtering (match C++ implementation)
+        // C++ order: measured_current -> observer -> corrected_current -> filter -> filtered_current
+        let corrected_current_l = self.observer_left.get_corrected_current(
+            measured_current_l,
+            self.prev_voltage_l, // Use actual voltage command from PID
+            motor_speed_l,
+        );
+        let corrected_current_r = self.observer_right.get_corrected_current(
+            measured_current_r,
+            self.prev_voltage_r, // Use actual voltage command from PID
+            motor_speed_r,
+        );
 
-        // Apply current filtering first (match C++ implementation)
-        let filtered_current_l = self.current_filter_left.update(measured_current_l);
-        let filtered_current_r = self.current_filter_right.update(measured_current_r);
+        // Apply current filtering after observer correction (match C++ implementation)
+        let filtered_current_l = self.current_filter_left.update(corrected_current_l);
+        let filtered_current_r = self.current_filter_right.update(corrected_current_r);
 
         // PID control for current regulation using filtered current
         // C++: float u = pid_current->update(force_to_current, current_filtered) / vin;
@@ -348,23 +343,6 @@ impl CurrentController {
         let voltage_r = self
             .pid_right
             .update(current_cmd.current_r, filtered_current_r);
-
-        // Apply motor observer for current correction with actual voltage command
-        let corrected_current_l = self.observer_left.get_corrected_current(
-            filtered_current_l,
-            voltage_l, // Use actual voltage command from PID
-            motor_speed_l,
-        );
-        let corrected_current_r = self.observer_right.get_corrected_current(
-            filtered_current_r,
-            voltage_r, // Use actual voltage command from PID
-            motor_speed_r,
-        );
-
-        /* info!(
-            "voltage_l: {}, voltage_r: {}, vin_voltage: {}",
-            voltage_l, voltage_r, vin_voltage
-        ); */
 
         // Apply voltage limits before duty cycle conversion (match C++ implementation)
         let limited_voltage_l = clamp_f32(voltage_l, -MAX_VOLTAGE, MAX_VOLTAGE);
@@ -391,6 +369,10 @@ impl CurrentController {
             duty_r
         };
 
+        // Store previous voltages for observer correction
+        self.prev_voltage_l = limited_voltage_l;
+        self.prev_voltage_r = limited_voltage_r;
+
         ControllerOutputs { duty_l, duty_r }
     }
 
@@ -414,7 +396,6 @@ pub enum ControllerType {
 /// Combines high-level controller, force-to-current converter, and current controller
 pub struct ControllerSystem {
     controller_type: ControllerType,
-    force_converter: ForceToCurrentConverter,
     current_controller: CurrentController,
     references: ControlReferences,
 }
@@ -423,7 +404,6 @@ impl ControllerSystem {
     pub fn new_lqr() -> Self {
         Self {
             controller_type: ControllerType::Lqr(LqrController::new()),
-            force_converter: ForceToCurrentConverter::new(),
             current_controller: CurrentController::new(),
             references: ControlReferences::new(),
         }
@@ -434,7 +414,6 @@ impl ControllerSystem {
 
         Self {
             controller_type: ControllerType::Adaptive(adaptive),
-            force_converter: ForceToCurrentConverter::new(),
             current_controller: CurrentController::new(),
             references: ControlReferences::new(),
         }
@@ -460,17 +439,22 @@ impl ControllerSystem {
         };
 
         // Step 2: Convert force to current command
-        let current_cmd = self.force_converter.force_to_current(control_force);
+        let current_cmd = CurrentCommand::from_currents(
+            control_force.force * constants::FORCE_TO_CURRENT,
+            control_force.force * constants::FORCE_TO_CURRENT,
+        );
 
-        let current_cmd = CurrentCommand::from_currents(0.1, 0.1);
+        // test
+        // let current_cmd = CurrentCommand::from_currents(0.1, 0.1);
+        // let current_cmd = CurrentCommand::from_currents(sensor_data.theta0, sensor_data.theta0);
 
         // Step 3: Current controller computes voltage
         let control_outputs = self.current_controller.current_to_duty(
             current_cmd,
             sensor_data.current_l,
             sensor_data.current_r,
-            sensor_data.motor_speed_l, // motor speed left
-            sensor_data.motor_speed_r, // motor speed right
+            sensor_data.motor_speed_l,
+            sensor_data.motor_speed_r,
             sensor_data.vin_voltage,
         );
 

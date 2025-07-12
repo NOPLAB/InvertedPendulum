@@ -41,6 +41,19 @@ impl PidController {
         }
     }
 
+    /// Create a new current controller with predefined parameters
+    /// Matches C++ implementation: new PID(0.928f, 10178.8f, 0.0f, DT, -12.0f, 12.0f)
+    pub fn new_current_controller() -> Self {
+        Self::new(
+            CURRENT_PID_KP,
+            CURRENT_PID_KI,
+            CURRENT_PID_KD,
+            DT,
+            CURRENT_PID_OUTPUT_MIN,
+            CURRENT_PID_OUTPUT_MAX,
+        )
+    }
+
     /// Set PID gains - exact match to C++ setGains()
     pub fn set_gains(&mut self, kp: f32, ki: f32, kd: f32) {
         self.kp = kp;
@@ -67,7 +80,7 @@ impl PidController {
         self.first_call = true;
     }
 
-    /// PID update function - EXACT match to C++ implementation
+    /// PID update function - CORRECTED anti-windup implementation
     /// C++ signature: float update(float setpoint, float measurement)
     pub fn update(&mut self, setpoint: f32, measurement: f32) -> f32 {
         // Calculate error - exact match to C++
@@ -87,20 +100,20 @@ impl PidController {
             self.derivative_term = self.kd * (error - self.prev_error) / self.dt;
         }
 
-        // Calculate PID output - exact match to C++
-        let mut output = proportional_term + self.integral_term + self.derivative_term;
+        // Calculate PID output BEFORE limiting - store unclamped value for anti-windup
+        let unclamped_output = proportional_term + self.integral_term + self.derivative_term;
 
-        // Apply output limits - exact match to C++
-        output = self.clamp(output, self.min_output, self.max_output);
+        // Apply output limits
+        let output = self.clamp(unclamped_output, self.min_output, self.max_output);
 
         // Anti-windup: prevent integral windup by clamping integral term
-        // EXACT match to C++ anti-windup logic
-        if output > self.max_output && self.integral_term > 0.0 {
+        // CORRECTED: Use unclamped_output for proper anti-windup detection
+        if unclamped_output > self.max_output && self.integral_term > 0.0 {
             self.integral_term = self.max_output - proportional_term - self.derivative_term;
             if self.integral_term < 0.0 {
                 self.integral_term = 0.0;
             }
-        } else if output < self.min_output && self.integral_term < 0.0 {
+        } else if unclamped_output < self.min_output && self.integral_term < 0.0 {
             self.integral_term = self.min_output - proportional_term - self.derivative_term;
             if self.integral_term > 0.0 {
                 self.integral_term = 0.0;

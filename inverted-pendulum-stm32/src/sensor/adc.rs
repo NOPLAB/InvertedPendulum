@@ -113,10 +113,6 @@ impl Adc1Manager {
             theta0: theta1_filtered,
             theta1: theta2_filtered,
             multiplexer: self.multiplexer_values, // Return all multiplexer values
-            theta1_raw: theta1_raw,
-            theta2_raw: theta2_raw,
-            multiplexer_raw: multiplexer_raw,
-            multiplexer_channel: self.multiplexer_counter,
         }
     }
 
@@ -261,8 +257,6 @@ impl Adc2Manager {
         Adc2Data {
             current_r: current_r_calibrated - self.current_r_offset,
             current_l: current_l_calibrated - self.current_l_offset,
-            current_r_raw: current_r_raw,
-            current_l_raw: current_l_raw,
         }
     }
 
@@ -309,10 +303,6 @@ pub struct Adc1Data {
     pub theta0: f32,                              // Filtered theta1 [V]
     pub theta1: f32,                              // Filtered theta2 [V]
     pub multiplexer: [f32; MULTIPLEXER_CHANNELS], // Filtered multiplexer channels [V]
-    pub theta1_raw: u16,                          // Raw theta1 ADC value
-    pub theta2_raw: u16,                          // Raw theta2 ADC value
-    pub multiplexer_raw: u16,                     // Raw multiplexer ADC value
-    pub multiplexer_channel: usize,               // Current multiplexer channel
 }
 
 impl Adc1Data {
@@ -321,10 +311,6 @@ impl Adc1Data {
             theta0: 0.0,
             theta1: 0.0,
             multiplexer: [0.0; MULTIPLEXER_CHANNELS],
-            theta1_raw: 0,
-            theta2_raw: 0,
-            multiplexer_raw: 0,
-            multiplexer_channel: 0,
         }
     }
 
@@ -340,22 +326,12 @@ impl Adc1Data {
 
     /// Get theta1 in radians
     pub fn get_theta1_radians(&self) -> f32 {
-        self.theta0 * ADC_TO_RAD
+        -self.theta0 * ADC_TO_RAD // C++版と同じく読み取り時に符号変更
     }
 
     /// Get theta2 in radians
     pub fn get_theta2_radians(&self) -> f32 {
         self.theta1 * ADC_TO_RAD
-    }
-
-    /// Get raw theta1 value for calibration (C++ style)
-    pub fn get_theta1_raw(&self) -> f32 {
-        (self.theta1_raw as f32) / 4095.0
-    }
-
-    /// Get raw theta2 value for calibration (C++ style)
-    pub fn get_theta2_raw(&self) -> f32 {
-        (self.theta2_raw as f32) / 4095.0
     }
 
     /// Get multiplexer channel value (C++ style interface)
@@ -391,10 +367,8 @@ impl Default for Adc1Data {
 /// ADC2 data structure
 #[derive(Debug, Clone, Copy)]
 pub struct Adc2Data {
-    pub current_r: f32,     // Filtered right motor current [A]
-    pub current_l: f32,     // Filtered left motor current [A]
-    pub current_r_raw: u16, // Raw right current ADC value
-    pub current_l_raw: u16, // Raw left current ADC value
+    pub current_r: f32, // Filtered right motor current [A]
+    pub current_l: f32, // Filtered left motor current [A]
 }
 
 impl Adc2Data {
@@ -402,8 +376,6 @@ impl Adc2Data {
         Self {
             current_r: 0.0,
             current_l: 0.0,
-            current_r_raw: 0,
-            current_l_raw: 0,
         }
     }
 }
@@ -445,11 +417,6 @@ impl AdcData {
         )
     }
 
-    /// Get sensor angles in degrees (legacy method)
-    pub fn get_sensor_angles(&self) -> (f32, f32) {
-        self.get_sensor_angles_degrees()
-    }
-
     pub fn get_motor_currents(&self) -> (f32, f32) {
         (self.adc2.current_r, self.adc2.current_l)
     }
@@ -474,16 +441,10 @@ pub static ADC_DATA: Mutex<ThreadModeRawMutex, RefCell<AdcData>> =
             theta0: 0.0,
             theta1: 0.0,
             multiplexer: [0.0; MULTIPLEXER_CHANNELS],
-            theta1_raw: 0,
-            theta2_raw: 0,
-            multiplexer_raw: 0,
-            multiplexer_channel: 0,
         },
         adc2: Adc2Data {
             current_r: 0.0,
             current_l: 0.0,
-            current_r_raw: 0,
-            current_l_raw: 0,
         },
     }));
 
