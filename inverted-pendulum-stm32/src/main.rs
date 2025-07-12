@@ -1,75 +1,61 @@
 #![no_std]
 #![no_main]
 
+mod constants;
+mod controller;
 mod fmt;
+mod lpf;
+mod mit_adaptive_controller;
 mod motor;
-mod qei;
+mod motor_observer;
+mod pid;
+mod sensor;
 
-use core::cell::RefCell;
+use core::{
+    cell::RefCell,
+    sync::atomic::{AtomicI32, Ordering},
+};
 
+use embassy_futures::select;
 use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, mutex::Mutex};
 #[cfg(not(feature = "defmt"))]
 use panic_halt as _;
+
+use crate::{
+    controller::ControllerSystem,
+    sensor::{
+        adc::{adc_task, Adc1Manager, Adc2Manager, ADC_DATA},
+        qei::{Qei, QeiEncoding, QeiResult},
+        SensorManager,
+    },
+};
+
 #[cfg(feature = "defmt")]
 use {defmt_rtt as _, panic_probe as _};
 
+use constants::*;
 use embassy_executor::Spawner;
 use embassy_stm32::{
     adc::Adc,
     bind_interrupts,
     exti::ExtiInput,
-    gpio::{Level, Output, Pull, Speed},
+    gpio::{Input, Level, Output, Pull, Speed},
     peripherals,
     rcc::AdcClockSource,
     time::Hertz,
     timer::simple_pwm::{PwmPin, SimplePwm},
 };
-use embassy_time::{Duration, Ticker, Timer};
+use embassy_time::{Duration, Instant, Ticker, Timer};
 use fmt::info;
 use motor::Motors;
-use qei::{Qei, QeiEncoding, QeiState};
 
 bind_interrupts!(struct Irqs {
     ADC1_2 => embassy_stm32::adc::InterruptHandler<peripherals::ADC1>,
     embassy_stm32::adc::InterruptHandler<peripherals::ADC2>;
 });
 
-#[derive(Debug)]
-struct AdcState {
-    theta1: u16,
-    theta2: u16,
-    multiplexer: [u16; 8],
-    current_r: u16,
-    current_l: u16,
-}
-
-static ADC_STATE: Mutex<ThreadModeRawMutex, RefCell<AdcState>> =
-    embassy_sync::mutex::Mutex::new(RefCell::new(AdcState {
-        theta1: 0,
-        theta2: 0,
-        multiplexer: [0; 8],
-        current_r: 0,
-        current_l: 0,
-    }));
-
-static QEI_R_STATE: Mutex<ThreadModeRawMutex, RefCell<QeiState>> =
-    embassy_sync::mutex::Mutex::new(RefCell::new(QeiState {
-        pulses: 0,
-        revolutions: 0,
-        curr_state: 0,
-        prev_state: 0,
-    }));
-
-static QEI_L_STATE: Mutex<ThreadModeRawMutex, RefCell<QeiState>> =
-    embassy_sync::mutex::Mutex::new(RefCell::new(QeiState {
-        pulses: 0,
-        revolutions: 0,
-        curr_state: 0,
-        prev_state: 0,
-    }));
-
-static MOTORS: Mutex<ThreadModeRawMutex, RefCell<Option<Motors>>> =
-    embassy_sync::mutex::Mutex::new(RefCell::new(None));
+static QEI_R_PULSES: AtomicI32 = AtomicI32::new(0);
+static QEI_L_PULSES: AtomicI32 = AtomicI32::new(0);
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -108,6 +94,9 @@ async fn main(spawner: Spawner) {
     // LED
     let mut led = Output::new(p.PB6, Level::Low, Speed::Low);
 
+    // Button
+    let button = Input::new(p.PB5, Pull::Up);
+
     // ADC1
     let mut adc1 = Adc::new(p.ADC1, Irqs);
     adc1.set_sample_time(embassy_stm32::adc::SampleTime::CYCLES601_5);
@@ -120,18 +109,29 @@ async fn main(spawner: Spawner) {
     let mut adc2 = Adc::new(p.ADC2, Irqs);
     adc2.set_sample_time(embassy_stm32::adc::SampleTime::CYCLES601_5);
 
-    spawner.must_spawn(ticker_adc(
+    let sample_time = 1.0 / ADC_SAMPLING_FREQUENCY as f32;
+    let adc1_manager = Adc1Manager::new(
         adc1,
-        p.PA0,
-        p.PB0,
-        p.PB1,
         multiplexer_ch_a,
         multiplexer_ch_b,
         multiplexer_ch_c,
-        adc2,
-        p.PA5,
-        p.PA7,
-    ));
+        sample_time,
+    );
+    let adc2_manager = Adc2Manager::new(adc2, sample_time);
+
+    // Spawn ADC task
+    spawner
+        .spawn(adc_task(
+            adc1_manager,
+            adc2_manager,
+            p.PB0, // theta1
+            p.PB1, // theta2
+            p.PA0, // multiplexer
+            p.PA5, // current_r
+            p.PA7, // current_l
+            Duration::from_hz(constants::ADC_SAMPLING_FREQUENCY as u64),
+        ))
+        .unwrap();
 
     // Encoder - Use ExtiInput for interrupt-based QEI
     let enc_r_a = ExtiInput::new(p.PA6, p.EXTI6, Pull::None);
@@ -139,12 +139,12 @@ async fn main(spawner: Spawner) {
     let enc_l_a = ExtiInput::new(p.PA8, p.EXTI8, Pull::Up);
     let enc_l_b = ExtiInput::new(p.PA9, p.EXTI9, Pull::Up);
 
-    // Create QEI instances
-    let qei_r = Qei::new(enc_r_a, enc_r_b, 1000, QeiEncoding::X4Encoding); // 1000 pulses per revolution
-    let qei_l = Qei::new(enc_l_a, enc_l_b, 1000, QeiEncoding::X4Encoding); // 1000 pulses per revolution
+    let qei_r = Qei::new(enc_r_a, enc_r_b, 1000, QeiEncoding::X4Encoding);
+    let qei_l = Qei::new(enc_l_a, enc_l_b, 1000, QeiEncoding::X4Encoding);
 
-    spawner.must_spawn(qei_encoder_r(qei_r));
-    spawner.must_spawn(qei_encoder_l(qei_l));
+    // Spawn encoder tasks
+    spawner.spawn(qei_encoder_r(qei_r)).unwrap();
+    spawner.spawn(qei_encoder_l(qei_l)).unwrap();
 
     // Motor Setup
     let motor_r_1_2 = SimplePwm::new(
@@ -159,10 +159,10 @@ async fn main(spawner: Spawner) {
             p.PA11,
             embassy_stm32::gpio::OutputType::PushPull,
         )),
-        Hertz(100_000),
+        Hertz(constants::MOTOR_PWM_FREQUENCY),
         embassy_stm32::timer::low_level::CountingMode::EdgeAlignedUp,
     );
-    let mut motor_l_1 = SimplePwm::new(
+    let motor_l_1 = SimplePwm::new(
         p.TIM2,
         None,
         Some(PwmPin::new_ch2(
@@ -171,7 +171,7 @@ async fn main(spawner: Spawner) {
         )),
         None,
         None,
-        Hertz(100_000),
+        Hertz(constants::MOTOR_PWM_FREQUENCY),
         embassy_stm32::timer::low_level::CountingMode::EdgeAlignedUp,
     );
     let motor_l_2 = SimplePwm::new(
@@ -183,149 +183,82 @@ async fn main(spawner: Spawner) {
             p.PB7,
             embassy_stm32::gpio::OutputType::PushPull,
         )),
-        Hertz(100_000),
+        Hertz(constants::MOTOR_PWM_FREQUENCY),
         embassy_stm32::timer::low_level::CountingMode::EdgeAlignedUp,
     );
 
-    motor_l_1.ch1().enable();
-    motor_l_1.ch1().set_duty_cycle_percent(80);
-
     // Initialize Motor Controller
     let motors = Motors::new(motor_r_1_2, motor_l_1, motor_l_2);
-    MOTORS.lock().await.replace(Some(motors));
 
-    spawner.must_spawn(ticker_control());
+    // Spawn control task
+    spawner.spawn(control_task(motors)).unwrap();
 
     loop {
         led.set_high();
-        Timer::after(Duration::from_millis(100)).await;
+        Timer::after(Duration::from_millis(500)).await;
         led.set_low();
-        Timer::after(Duration::from_millis(100)).await;
+        Timer::after(Duration::from_millis(500)).await;
 
-        let adc_state = ADC_STATE.lock().await;
-        let adc_state = adc_state.borrow();
-
-        let qei_r_state = QEI_R_STATE.lock().await;
-        let qei_r = qei_r_state.borrow();
-
-        let qei_l_state = QEI_L_STATE.lock().await;
-        let qei_l = qei_l_state.borrow();
-
-        // Calculate angles from encoder pulses (assuming 1000 pulses per revolution)
-        // Convert to degrees * 10 for display (e.g., 1234 means 123.4 degrees)
-        let angle_r_x10 = (qei_r.pulses * 3600) / 1000;
-        let angle_l_x10 = (qei_l.pulses * 3600) / 1000;
-
-        info!(
-            "ADC: theta1={}, theta2={} | QEI R: {} pulses, {}°x10 | QEI L: {} pulses, {}°x10",
-            adc_state.theta1,
-            adc_state.theta2,
-            qei_r.pulses,
-            angle_r_x10,
-            qei_l.pulses,
-            angle_l_x10
-        );
+        // Check button state
+        if button.is_low() {}
     }
 }
 
-const MULTIPLEXER_CHANNELS: usize = 8;
-
-#[embassy_executor::task]
-async fn ticker_adc(
-    mut adc1: Adc<'static, peripherals::ADC1>,
-    mut adc1_in1: peripherals::PA0,
-    mut adc1_in11: peripherals::PB0,
-    mut adc1_in12: peripherals::PB1,
-    mut multiplexer_ch_a: Output<'static>,
-    mut multiplexer_ch_b: Output<'static>,
-    mut multiplexer_ch_c: Output<'static>,
-    mut adc2: Adc<'static, peripherals::ADC2>,
-    mut adc2_in2: peripherals::PA5,
-    mut adc2_in4: peripherals::PA7,
-) {
-    let mut ticker = Ticker::every(Duration::from_hz(1_000));
-
-    let mut multiplexer_counter = 0;
-
-    loop {
-        // ADC1
-
-        let multiplexer_value = adc1.read(&mut adc1_in1).await;
-        let theta1 = adc1.read(&mut adc1_in11).await;
-        let theta2 = adc1.read(&mut adc1_in12).await;
-
-        let mut multiplexer = ADC_STATE.lock().await.borrow().multiplexer;
-        multiplexer[multiplexer_counter] = multiplexer_value;
-
-        // Set multiplexer channels
-        multiplexer_counter += 1;
-        if multiplexer_counter % MULTIPLEXER_CHANNELS == 0 {
-            multiplexer_counter = 0;
-        }
-
-        multiplexer_ch_a.set_level(if multiplexer_counter & 0b001 != 0 {
-            Level::High
-        } else {
-            Level::Low
-        });
-        multiplexer_ch_b.set_level(if multiplexer_counter & 0b010 != 0 {
-            Level::High
-        } else {
-            Level::Low
-        });
-        multiplexer_ch_c.set_level(if multiplexer_counter & 0b100 != 0 {
-            Level::High
-        } else {
-            Level::Low
-        });
-
-        // ADC2
-
-        let current_r = adc2.read(&mut adc2_in2).await;
-        let current_l = adc2.read(&mut adc2_in4).await;
-
-        ADC_STATE.lock().await.replace(AdcState {
-            theta1,
-            theta2,
-            multiplexer,
-            current_r,
-            current_l,
-        });
-
-        // Wait for the next ticker event
-
-        ticker.next().await;
-    }
-}
+// ADC task is now handled by the adc module
 
 #[embassy_executor::task]
 async fn qei_encoder_r(mut qei: Qei<'static>) {
-    qei.run_with_global_state(&QEI_R_STATE).await;
+    loop {
+        let encode_result = qei.run().await;
+        qei.reset().await;
+
+        let prev_value = QEI_R_PULSES.load(Ordering::Relaxed);
+        QEI_R_PULSES.store(prev_value + encode_result.pulses, Ordering::Relaxed);
+    }
 }
 
 #[embassy_executor::task]
 async fn qei_encoder_l(mut qei: Qei<'static>) {
-    qei.run_with_global_state(&QEI_L_STATE).await;
+    loop {
+        let encode_result = qei.run().await;
+        qei.reset().await;
+
+        let prev_value = QEI_L_PULSES.load(Ordering::Relaxed);
+        QEI_L_PULSES.store(prev_value + encode_result.pulses, Ordering::Relaxed);
+    }
 }
 
 #[embassy_executor::task]
-async fn ticker_control() {
-    let mut ticker = Ticker::every(Duration::from_millis(100));
-    let mut counter = 0u32;
+async fn control_task(mut motors: Motors) {
+    let mut ticker = Ticker::every(Duration::from_hz(CONTROL_LOOP_FREQUENCY as u64));
+
+    let mut sensor_data = SensorManager::new(1.0 / CONTROL_LOOP_FREQUENCY as f32);
+    let mut controller_system = ControllerSystem::new_lqr();
 
     loop {
-        // Example motor control logic
-        if let Some(motors) = MOTORS.lock().await.borrow_mut().as_mut() {
-            match (counter / 10) % 4 {
-                0 => motors.set_speed_both(0.0, 0.0),   // Stop
-                1 => motors.set_speed_both(1.0, 1.0),   // Forward
-                2 => motors.set_speed_both(0.0, 0.0),   // Stop
-                3 => motors.set_speed_both(-1.0, -1.0), // Backward
-                _ => {}
+        {
+            let adc_data = ADC_DATA.lock().await;
+
+            sensor_data.update(
+                &adc_data.borrow(),
+                QEI_R_PULSES.load(Ordering::Relaxed),
+                QEI_L_PULSES.load(Ordering::Relaxed),
+            );
+
+            let result = controller_system.compute_control(&sensor_data);
+
+            if let Ok(output) = result {
+                motors.set_duty_both(0.0, output.duty_r);
+                /* info!(
+                    "Control Output: Duty L: {}%, Duty R: {}%",
+                    (output.duty_l * 100.0) as i32,
+                    (output.duty_r * 100.0) as i32,
+                ); */
+            } else {
+                info!("Control computation failed");
             }
         }
 
-        counter += 1;
         ticker.next().await;
     }
 }
