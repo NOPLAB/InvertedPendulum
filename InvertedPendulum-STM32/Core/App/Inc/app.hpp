@@ -35,8 +35,13 @@ extern "C" {
 #define Bx 2.2276f                       // 粘性摩擦係数
 #define PULSE_TO_RAD \
   (2.0f * PI / (12.0f * 4.0f))  // エンコーダのパルスからラジアンへの変換
-// ADC_TO_RAD = (333.3 * ((2.0*pi)/360.0)) / 5.0 * 3.3
-#define ADV_TO_RAD 3.8393f  // ADC値からラジアンへの変換
+// Potentiometer specifications: 333.3° electrical angle, 5V supply, 3.3V ADC
+// ADV_TO_RAD = (333.3 * (2π/360)) / (3.3/5.0) = 5.818 / 0.66 = 8.815
+#define POT_ELECTRICAL_ANGLE 333.3f  // ポテンショメータ電気的有効角 [度]
+#define POT_SUPPLY_VOLTAGE 5.0f      // ポテンショメータ電源電圧 [V]
+#define ADC_VREF_VOLTAGE 3.3f        // ADC基準電圧 [V]
+#define VOLTAGE_DIVIDER_RATIO (ADC_VREF_VOLTAGE / POT_SUPPLY_VOLTAGE)  // 電圧分割比
+#define ADV_TO_RAD ((POT_ELECTRICAL_ANGLE * (2.0f * PI / 360.0f)) / VOLTAGE_DIVIDER_RATIO)  // ADC値からラジアンへの変換
 #define PULSE_TO_POSITION      \
   (2.0f * PI * WHEEL_RADIUS) / \
       (12.0f * 4.0f * GEAR_RATIO)  // エンコーダのパルスから位置[m]への変換
