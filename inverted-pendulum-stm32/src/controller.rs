@@ -2,7 +2,6 @@ use crate::constants::{self, *};
 use crate::lpf::LowPassFilter;
 use crate::mit_adaptive_controller::MitAdaptiveController;
 use crate::motor_observer::MotorObserver;
-use crate::pendulum_observer::PendulumAngularVelocityObserver;
 use crate::pid::PidController;
 use crate::sensor::SensorManager;
 
@@ -61,8 +60,6 @@ pub struct LqrController {
     theta_filter: LowPassFilter,
     prev_filtered_theta: f32,
     theta_velocity: f32,
-    pendulum_observer: PendulumAngularVelocityObserver,
-    prev_force: f32,
 }
 
 impl LqrController {
@@ -75,8 +72,6 @@ impl LqrController {
             theta_filter: LowPassFilter::new(DT, THETA_FILTER_CUTOFF_FREQ, 1.0),
             prev_filtered_theta: 0.0,
             theta_velocity: 0.0,
-            pendulum_observer: PendulumAngularVelocityObserver::new(PENDULUM_PARAMS, DT),
-            prev_force: 0.0,
         }
     }
 
@@ -89,8 +84,6 @@ impl LqrController {
             theta_filter: LowPassFilter::new(DT, THETA_FILTER_CUTOFF_FREQ, 1.0),
             prev_filtered_theta: 0.0,
             theta_velocity: 0.0,
-            pendulum_observer: PendulumAngularVelocityObserver::new(PENDULUM_PARAMS, DT),
-            prev_force: 0.0,
         }
     }
 }
@@ -128,8 +121,6 @@ impl HighLevelController for LqrController {
         // Apply force limits
         let limited_force = clamp_f32(control_force, -MAX_FORCE, MAX_FORCE);
 
-        self.prev_force = limited_force;
-
         Ok(limited_force)
     }
 
@@ -162,7 +153,7 @@ pub struct AdaptiveController {
 impl AdaptiveController {
     pub fn new(sample_time: f32) -> Self {
         let mut controller = MitAdaptiveController::new(sample_time);
-        controller.set_initial_gains(-2.0000, -5.6814, -22.4525, -2.75834);
+        controller.set_initial_gains(K_POSITION, K_VELOCITY, K_ANGLE, K_ANGULAR_VELOCITY);
         controller.set_reference_model(10.0, 0.7);
         Self {
             controller,

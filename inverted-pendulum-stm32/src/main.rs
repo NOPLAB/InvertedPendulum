@@ -8,7 +8,6 @@ mod lpf;
 mod mit_adaptive_controller;
 mod motor;
 mod motor_observer;
-mod pendulum_observer;
 mod pid;
 mod sensor;
 
@@ -20,7 +19,7 @@ use panic_halt as _;
 use crate::{
     controller::ControllerSystem,
     sensor::{
-        adc::{adc_task, Adc1Manager, Adc2Manager, ADC_DATA},
+        adc::{adc_task, Adc1Manager, Adc2Manager, get_theta0_radians, get_theta1_radians, get_motor_currents},
         qei::{Qei, QeiEncoding},
         SensorManager,
     },
@@ -96,7 +95,7 @@ async fn main(spawner: Spawner) {
 
     // ADC1
     let mut adc1 = Adc::new(p.ADC1, Irqs);
-    adc1.set_sample_time(embassy_stm32::adc::SampleTime::CYCLES181_5);
+    adc1.set_sample_time(embassy_stm32::adc::SampleTime::CYCLES601_5);
 
     let multiplexer_ch_a = Output::new(p.PB4, Level::Low, Speed::Low);
     let multiplexer_ch_b = Output::new(p.PB3, Level::Low, Speed::Low);
@@ -104,17 +103,10 @@ async fn main(spawner: Spawner) {
 
     // ADC2
     let mut adc2 = Adc::new(p.ADC2, Irqs);
-    adc2.set_sample_time(embassy_stm32::adc::SampleTime::CYCLES181_5);
+    adc2.set_sample_time(embassy_stm32::adc::SampleTime::CYCLES601_5);
 
-    let sample_time = 1.0 / ADC_SAMPLING_FREQUENCY as f32;
-    let adc1_manager = Adc1Manager::new(
-        adc1,
-        multiplexer_ch_a,
-        multiplexer_ch_b,
-        multiplexer_ch_c,
-        sample_time,
-    );
-    let adc2_manager = Adc2Manager::new(adc2, sample_time);
+    let adc1_manager = Adc1Manager::new(adc1, multiplexer_ch_a, multiplexer_ch_b, multiplexer_ch_c);
+    let adc2_manager = Adc2Manager::new(adc2);
 
     // Spawn ADC task
     spawner
@@ -126,7 +118,6 @@ async fn main(spawner: Spawner) {
             p.PA0, // multiplexer
             p.PA5, // current_r
             p.PA7, // current_l
-            Duration::from_hz(constants::ADC_SAMPLING_FREQUENCY as u64),
         ))
         .unwrap();
 
@@ -198,6 +189,7 @@ async fn main(spawner: Spawner) {
 
         // Check button state
         if button.is_low() {
+            sensor::adc::calibrate_theta_offsets();
             START_CONTROL.store(true, Ordering::Relaxed);
         }
     }
@@ -237,10 +229,16 @@ async fn control_task(mut motors: Motors) {
 
     loop {
         if START_CONTROL.load(Ordering::Relaxed) {
-            let adc_data = ADC_DATA.lock().await;
+            // Get ADC data directly without mutex
+            let theta0 = get_theta0_radians();
+            let theta1 = get_theta1_radians();
+            let (current_r, current_l) = get_motor_currents();
 
-            sensor_data.update(
-                &adc_data.borrow(),
+            sensor_data.update_direct(
+                theta0,
+                theta1,
+                current_r,
+                current_l,
                 QEI_R_PULSES.load(Ordering::Relaxed),
                 QEI_L_PULSES.load(Ordering::Relaxed),
             );

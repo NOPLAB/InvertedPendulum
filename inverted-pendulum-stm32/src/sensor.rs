@@ -1,4 +1,4 @@
-use crate::{constants, sensor::adc::AdcData};
+use crate::{constants, fmt::info};
 
 pub mod adc;
 pub mod qei;
@@ -48,13 +48,14 @@ impl SensorManager {
         }
     }
 
-    pub fn update(&mut self, adc_data: &AdcData, qei_r: i32, qei_l: i32) {
-        // Update sensor data from ADC readings
-        let theta0 = adc_data.get_sensor_angles_radians().0;
-        let theta1 = adc_data.get_sensor_angles_radians().1;
-
+    pub fn update_direct(&mut self, theta0: f32, theta1: f32, current_r: f32, current_l: f32, qei_r: i32, qei_l: i32) {
+        // Update sensor data directly from optimized ADC functions
         self.theta0 = theta0;
         self.theta1 = theta1;
+        self.current_r = current_r;
+        self.current_l = current_l;
+
+        info!("Theta0: {}, Theta1: {}", self.theta0, self.theta1);
 
         let position_r = constants::pulses_to_position(qei_r);
         let position_l = -constants::pulses_to_position(qei_l);
@@ -73,13 +74,11 @@ impl SensorManager {
         self.position_r = position_r;
         self.position_l = position_l;
 
-        self.vin_voltage = adc_data.get_vin_voltage();
-
-        let motor_currents = adc_data.get_motor_currents();
-        self.current_r = motor_currents.0;
-        self.current_l = motor_currents.1;
+        // TODO: Add vin_voltage reading if needed
+        // self.vin_voltage = get_vin_voltage();
 
         self.prev_qei_r = qei_r;
         self.prev_qei_l = qei_l;
     }
+
 }
