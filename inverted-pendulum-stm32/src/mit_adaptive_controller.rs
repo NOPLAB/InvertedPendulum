@@ -288,9 +288,10 @@ impl MitAdaptiveController {
     }
 
     /// Calculate plant output (C++ style)
-    fn calculate_plant_output(&self, _x: f32, _dx: f32, theta: f32, _dtheta: f32) -> f32 {
-        // In C++ implementation, this simply returns theta (pendulum angle)
-        theta
+    fn calculate_plant_output(&self, x: f32, _dx: f32, _theta: f32, _dtheta: f32) -> f32 {
+        // Return position (x) as plant output for position control
+        // This allows the adaptive controller to properly control position
+        x
     }
 
     /// Original update method (keeping for compatibility)

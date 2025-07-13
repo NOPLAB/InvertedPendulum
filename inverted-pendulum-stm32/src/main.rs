@@ -1,9 +1,11 @@
 #![no_std]
 #![no_main]
 
+mod adaptive_line_controller;
 mod constants;
 mod controller;
 mod fmt;
+mod line_controller;
 mod lpf;
 mod mit_adaptive_controller;
 mod motor;
@@ -225,6 +227,10 @@ async fn main(spawner: Spawner) {
                 MODE.store(2, Ordering::Relaxed);
                 led.set_high();
             }
+            3 => {
+                MODE.store(3, Ordering::Relaxed);
+                led.set_high();
+            }
             _ => {
                 MODE.store(0, Ordering::Relaxed);
                 led.set_low();
@@ -278,6 +284,10 @@ async fn control_task(mut motors: Motors) {
                     controller_system.switch_to_lqr();
                 }
                 2 => {
+                    info!("Switching to Adaptive Line controller");
+                    controller_system.switch_to_adaptive_line(1.0 / CONTROL_LOOP_FREQUENCY as f32);
+                }
+                3 => {
                     info!("Switching to UART controller");
                     controller_system.switch_to_uart();
                 }
@@ -312,6 +322,26 @@ async fn control_task(mut motors: Motors) {
                     info!("Control computation failed");
                 }
             } else if mode == 2 {
+                // New Adaptive Line Tracing control
+                let result = controller_system.compute_control(&sensor_data);
+                if let Ok(output) = result {
+                    motors.set_duty_both(output.duty_l, output.duty_r);
+
+                    // デバッグ情報の出力（必要に応じてコメントアウト）
+
+                    /* if let Some(line_detected) = controller_system.is_adaptive_line_detected() {
+                        if line_detected {
+                            if let Some(line_pos) = controller_system.get_adaptive_line_position() {
+                                info!("Line detected at position: {}", line_pos);
+                            }
+                        } else {
+                            info!("No line detected");
+                        }
+                    } */
+                } else {
+                    info!("Adaptive Line control computation failed");
+                }
+            } else if mode == 3 {
                 let position = (sensor_data.position_r + sensor_data.position_l) / 2.0;
 
                 THETA.store(sensor_data.theta0.to_bits(), Ordering::Relaxed);
@@ -340,7 +370,7 @@ async fn control_task(mut motors: Motors) {
 async fn uart_task(mut uart: Uart<'static, mode::Async>) {
     let mut buf = [0u8; 6];
     loop {
-        if MODE.load(Ordering::Relaxed) != 2 {
+        if MODE.load(Ordering::Relaxed) != 3 {
             embassy_time::Timer::after(Duration::from_millis(200)).await;
             continue;
         }

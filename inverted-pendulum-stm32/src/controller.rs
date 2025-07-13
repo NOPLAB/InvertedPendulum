@@ -1,3 +1,4 @@
+use crate::adaptive_line_controller::AdaptiveLineController;
 use crate::constants::{self, *};
 use crate::lpf::LowPassFilter;
 use crate::mit_adaptive_controller::MitAdaptiveController;
@@ -350,9 +351,7 @@ pub struct UartController {
 
 impl UartController {
     pub fn new() -> Self {
-        Self {
-            force_command: 0.0,
-        }
+        Self { force_command: 0.0 }
     }
 
     pub fn set_force_command(&mut self, force: f32) {
@@ -383,6 +382,7 @@ pub enum ControllerType {
     Lqr(LqrController),
     Adaptive(AdaptiveController),
     Uart(UartController),
+    AdaptiveLine(AdaptiveLineController),
 }
 
 /// Complete Controller System
@@ -420,6 +420,14 @@ impl ControllerSystem {
         }
     }
 
+    pub fn new_adaptive_line(sample_time: f32) -> Self {
+        Self {
+            controller_type: ControllerType::AdaptiveLine(AdaptiveLineController::new(sample_time)),
+            current_controller: CurrentController::new(),
+            references: ControlReferences::new(),
+        }
+    }
+
     pub fn set_references(&mut self, references: ControlReferences) {
         self.references = references;
     }
@@ -429,35 +437,53 @@ impl ControllerSystem {
         &mut self,
         sensor_data: &SensorManager,
     ) -> Result<ControllerOutputs, ControllerError> {
-        // Step 1: High-level controller computes force
-        let control_force = match &mut self.controller_type {
-            ControllerType::Lqr(controller) => {
-                controller.compute_control_force(sensor_data, &self.references)?
-            }
-            ControllerType::Adaptive(controller) => {
-                controller.compute_control_force(sensor_data, &self.references)?
-            }
-            ControllerType::Uart(controller) => {
-                controller.compute_control_force(sensor_data, &self.references)?
-            }
-        };
+        match &mut self.controller_type {
+            ControllerType::AdaptiveLine(controller) => {
+                // 倒立振子ライントレース用左右独立制御
+                let (force_left, force_right) = controller.compute_control_outputs(sensor_data, &self.references)?;
+                
+                // 左右独立電流制御
+                let control_outputs = self.current_controller.current_to_duty(
+                    force_left * constants::FORCE_TO_CURRENT,
+                    force_right * constants::FORCE_TO_CURRENT,
+                    sensor_data.current_l,
+                    sensor_data.current_r,
+                    sensor_data.motor_speed_l,
+                    sensor_data.motor_speed_r,
+                    sensor_data.vin_voltage,
+                );
 
-        // test
-        // let current_cmd = CurrentCommand::from_currents(0.1, 0.1);
-        // let current_cmd = CurrentCommand::from_currents(sensor_data.theta0, sensor_data.theta0);
+                Ok(control_outputs)
+            }
+            _ => {
+                // 他のコントローラ用従来実装（単一制御力）
+                let control_force = match &mut self.controller_type {
+                    ControllerType::Lqr(controller) => {
+                        controller.compute_control_force(sensor_data, &self.references)?
+                    }
+                    ControllerType::Adaptive(controller) => {
+                        controller.compute_control_force(sensor_data, &self.references)?
+                    }
+                    ControllerType::Uart(controller) => {
+                        controller.compute_control_force(sensor_data, &self.references)?
+                    }
+                    ControllerType::AdaptiveLine(_) => unreachable!(), // 上で処理済み
+                };
 
-        // Step 3: Current controller computes voltage
-        let control_outputs = self.current_controller.current_to_duty(
-            control_force * constants::FORCE_TO_CURRENT,
-            control_force * constants::FORCE_TO_CURRENT,
-            sensor_data.current_l,
-            sensor_data.current_r,
-            sensor_data.motor_speed_l,
-            sensor_data.motor_speed_r,
-            sensor_data.vin_voltage,
-        );
+                // 従来の同一制御力での電流制御
+                let control_outputs = self.current_controller.current_to_duty(
+                    control_force * constants::FORCE_TO_CURRENT,
+                    control_force * constants::FORCE_TO_CURRENT,
+                    sensor_data.current_l,
+                    sensor_data.current_r,
+                    sensor_data.motor_speed_l,
+                    sensor_data.motor_speed_r,
+                    sensor_data.vin_voltage,
+                );
 
-        Ok(control_outputs)
+                Ok(control_outputs)
+            }
+        }
     }
 
     pub fn set_uart_force_command(&mut self, force: f32) {
@@ -481,11 +507,34 @@ impl ControllerSystem {
         self.current_controller.reset();
     }
 
+    pub fn switch_to_adaptive_line(&mut self, sample_time: f32) {
+        self.controller_type =
+            ControllerType::AdaptiveLine(AdaptiveLineController::new(sample_time));
+        self.current_controller.reset();
+    }
+
+    pub fn get_adaptive_line_position(&self) -> Option<f32> {
+        if let ControllerType::AdaptiveLine(controller) = &self.controller_type {
+            Some(controller.get_line_position())
+        } else {
+            None
+        }
+    }
+
+    pub fn is_adaptive_line_detected(&self) -> Option<bool> {
+        if let ControllerType::AdaptiveLine(controller) = &self.controller_type {
+            Some(controller.is_line_detected())
+        } else {
+            None
+        }
+    }
+
     pub fn reset(&mut self) {
         match &mut self.controller_type {
             ControllerType::Lqr(controller) => controller.reset(),
             ControllerType::Adaptive(controller) => controller.reset(),
             ControllerType::Uart(controller) => controller.reset(),
+            ControllerType::AdaptiveLine(controller) => controller.reset(),
         }
         self.current_controller.reset();
     }

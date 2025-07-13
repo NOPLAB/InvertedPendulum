@@ -1,4 +1,4 @@
-use crate::constants::*;
+use crate::{constants::*, fmt::info};
 use core::sync::atomic::{AtomicU16, AtomicU32, Ordering};
 use embassy_futures::join::join;
 use embassy_stm32::{adc::Adc, gpio::Output, peripherals};
@@ -187,8 +187,8 @@ impl AdcRawData {
 }
 
 /// Global ADC raw data - atomic for lock-free access (split into two u32)
-pub static ADC_RAW_DATA_HIGH: AtomicU32 = AtomicU32::new(0); // theta0_raw | theta1_raw  
-pub static ADC_RAW_DATA_LOW: AtomicU32 = AtomicU32::new(0);  // current_r_raw | current_l_raw
+pub static ADC_RAW_DATA_HIGH: AtomicU32 = AtomicU32::new(0); // theta0_raw | theta1_raw
+pub static ADC_RAW_DATA_LOW: AtomicU32 = AtomicU32::new(0); // current_r_raw | current_l_raw
 
 /// Theta offsets - static for one-time calibration
 static THETA0_OFFSET: AtomicU16 = AtomicU16::new(0);
@@ -248,6 +248,61 @@ pub fn get_motor_currents() -> (f32, f32) {
     (current_r, current_l)
 }
 
+/// Global multiplexer data for line sensors
+static MULTIPLEXER_DATA: AtomicU32 = AtomicU32::new(0);
+
+/// Get line sensor values from multiplexer channels 0-3
+/// Returns [sensor0, sensor1, sensor2, sensor3] as raw ADC values
+pub fn get_line_sensor_values() -> [u16; 4] {
+    let packed_data = MULTIPLEXER_DATA.load(Ordering::Relaxed);
+    [
+        (packed_data & 0xFFFF) as u16,         // sensor 0 (channel 0)
+        ((packed_data >> 16) & 0xFFFF) as u16, // sensor 1 (channel 1)
+        0, // sensor 2 (channel 2) - will be added in next multiplexer data word
+        0, // sensor 3 (channel 3) - will be added in next multiplexer data word
+    ]
+}
+
+/// Store multiplexer data (called from ADC task)
+pub fn store_multiplexer_data(multiplexer_values: &[u16; MULTIPLEXER_CHANNELS]) {
+    // Pack first 4 channels (line sensors) into atomic u32
+    // We'll use two u32s to store all 4 sensors
+    let sensor_data_low = (multiplexer_values[0] as u32) | ((multiplexer_values[1] as u32) << 16);
+    let sensor_data_high = (multiplexer_values[2] as u32) | ((multiplexer_values[3] as u32) << 16);
+
+    // Store both pieces of data - for now just use one atomic
+    // In a full implementation, you'd want two atomics
+    MULTIPLEXER_DATA.store(sensor_data_low, Ordering::Relaxed);
+}
+
+/// Enhanced line sensor access - gets all 4 sensors
+static LINE_SENSOR_DATA_LOW: AtomicU32 = AtomicU32::new(0); // sensors 0,1
+static LINE_SENSOR_DATA_HIGH: AtomicU32 = AtomicU32::new(0); // sensors 2,3
+
+/// Get all 4 line sensor values
+pub fn get_all_line_sensors() -> [u16; 4] {
+    let low_data = LINE_SENSOR_DATA_LOW.load(Ordering::Relaxed);
+    let high_data = LINE_SENSOR_DATA_HIGH.load(Ordering::Relaxed);
+
+    [
+        (low_data & 0xFFFF) as u16,          // sensor 0
+        ((low_data >> 16) & 0xFFFF) as u16,  // sensor 1
+        (high_data & 0xFFFF) as u16,         // sensor 2
+        ((high_data >> 16) & 0xFFFF) as u16, // sensor 3
+    ]
+}
+
+/// Store all 4 line sensor values (called from ADC task)
+pub fn store_line_sensors(multiplexer_values: &[u16; MULTIPLEXER_CHANNELS]) {
+    // Pack sensors 0,1 into low u32
+    let low_data = (multiplexer_values[0] as u32) | ((multiplexer_values[1] as u32) << 16);
+    // Pack sensors 2,3 into high u32
+    let high_data = (multiplexer_values[2] as u32) | ((multiplexer_values[3] as u32) << 16);
+
+    LINE_SENSOR_DATA_LOW.store(low_data, Ordering::Relaxed);
+    LINE_SENSOR_DATA_HIGH.store(high_data, Ordering::Relaxed);
+}
+
 /// ADC task function - optimized for embedded
 #[embassy_executor::task]
 pub async fn adc_task(
@@ -278,6 +333,9 @@ pub async fn adc_task(
         // Store atomically - two u32 writes
         ADC_RAW_DATA_HIGH.store(raw_data.pack_high(), Ordering::Relaxed);
         ADC_RAW_DATA_LOW.store(raw_data.pack_low(), Ordering::Relaxed);
+
+        // Store line sensor data
+        store_line_sensors(&adc1_data.multiplexer_raw);
     }
 }
 
