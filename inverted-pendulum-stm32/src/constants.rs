@@ -31,8 +31,6 @@ pub const CURRENT_SENSOR_OFFSET: f32 = 1.65; // [V] (for compatibility)
 // Encoder constants (from C++ implementation) - ALL IN RADIANS
 pub const ENCODER_PULSES_PER_REV: i32 = 12 * 4; // Exact match to C++ (12 pulses * 4 quadrature)
 pub const PULSE_TO_RAD: f32 = (2.0 * core::f32::consts::PI) / (12.0 * 4.0); // Exact match to C++
-pub const ENCODER_RESOLUTION_RAD: f32 =
-    (2.0 * core::f32::consts::PI) / (ENCODER_PULSES_PER_REV as f32); // Radians per pulse
 
 // Control limits (from C++ implementation)
 pub const MAX_CURRENT: f32 = 10.0; // Maximum current [A]
@@ -126,10 +124,6 @@ pub fn adc_to_current_with_offset(adc_value: u16, offset: u16) -> f32 {
         0 // Clamp to zero if offset is larger
     };
     adc_to_current(compensated_adc)
-}
-
-pub fn pulses_to_angle_radians(pulses: i32) -> f32 {
-    (pulses as f32) * ENCODER_RESOLUTION_RAD
 }
 
 // C++ implementation position calculation (exact match)

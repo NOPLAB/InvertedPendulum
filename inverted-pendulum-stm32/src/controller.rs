@@ -341,10 +341,48 @@ impl CurrentController {
     }
 }
 
+/// UART Force Controller
+/// Directly applies force commands received via UART
+#[derive(Debug)]
+pub struct UartController {
+    force_command: f32,
+}
+
+impl UartController {
+    pub fn new() -> Self {
+        Self {
+            force_command: 0.0,
+        }
+    }
+
+    pub fn set_force_command(&mut self, force: f32) {
+        self.force_command = clamp_f32(force, -MAX_FORCE, MAX_FORCE);
+    }
+}
+
+impl HighLevelController for UartController {
+    fn compute_control_force(
+        &mut self,
+        _sensor_data: &SensorManager,
+        _references: &ControlReferences,
+    ) -> Result<f32, ControllerError> {
+        Ok(self.force_command)
+    }
+
+    fn reset(&mut self) {
+        self.force_command = 0.0;
+    }
+
+    fn set_parameters(&mut self, _params: &[f32]) {
+        // UART controller doesn't use parameters
+    }
+}
+
 /// Controller type enum for compile-time dispatch
 pub enum ControllerType {
     Lqr(LqrController),
     Adaptive(AdaptiveController),
+    Uart(UartController),
 }
 
 /// Complete Controller System
@@ -374,6 +412,14 @@ impl ControllerSystem {
         }
     }
 
+    pub fn new_uart() -> Self {
+        Self {
+            controller_type: ControllerType::Uart(UartController::new()),
+            current_controller: CurrentController::new(),
+            references: ControlReferences::new(),
+        }
+    }
+
     pub fn set_references(&mut self, references: ControlReferences) {
         self.references = references;
     }
@@ -389,6 +435,9 @@ impl ControllerSystem {
                 controller.compute_control_force(sensor_data, &self.references)?
             }
             ControllerType::Adaptive(controller) => {
+                controller.compute_control_force(sensor_data, &self.references)?
+            }
+            ControllerType::Uart(controller) => {
                 controller.compute_control_force(sensor_data, &self.references)?
             }
         };
@@ -411,10 +460,32 @@ impl ControllerSystem {
         Ok(control_outputs)
     }
 
+    pub fn set_uart_force_command(&mut self, force: f32) {
+        if let ControllerType::Uart(controller) = &mut self.controller_type {
+            controller.set_force_command(force);
+        }
+    }
+
+    pub fn switch_to_lqr(&mut self) {
+        self.controller_type = ControllerType::Lqr(LqrController::new());
+        self.current_controller.reset();
+    }
+
+    pub fn switch_to_adaptive(&mut self, sample_time: f32) {
+        self.controller_type = ControllerType::Adaptive(AdaptiveController::new(sample_time));
+        self.current_controller.reset();
+    }
+
+    pub fn switch_to_uart(&mut self) {
+        self.controller_type = ControllerType::Uart(UartController::new());
+        self.current_controller.reset();
+    }
+
     pub fn reset(&mut self) {
         match &mut self.controller_type {
             ControllerType::Lqr(controller) => controller.reset(),
             ControllerType::Adaptive(controller) => controller.reset(),
+            ControllerType::Uart(controller) => controller.reset(),
         }
         self.current_controller.reset();
     }

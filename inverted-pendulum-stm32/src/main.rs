@@ -11,7 +11,7 @@ mod motor_observer;
 mod pid;
 mod sensor;
 
-use core::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use core::sync::atomic::{AtomicI32, AtomicU32, AtomicU8, Ordering};
 
 #[cfg(not(feature = "defmt"))]
 use panic_halt as _;
@@ -19,7 +19,10 @@ use panic_halt as _;
 use crate::{
     controller::ControllerSystem,
     sensor::{
-        adc::{adc_task, Adc1Manager, Adc2Manager, get_theta0_radians, get_theta1_radians, get_motor_currents},
+        adc::{
+            adc_task, calibrate_theta_offsets, get_motor_currents, get_theta0_radians,
+            get_theta1_radians, Adc1Manager, Adc2Manager,
+        },
         qei::{Qei, QeiEncoding},
         SensorManager,
     },
@@ -34,24 +37,30 @@ use embassy_stm32::{
     adc::Adc,
     bind_interrupts,
     exti::ExtiInput,
-    gpio::{Input, Level, Output, Pull, Speed},
-    peripherals,
+    gpio::{Level, Output, Pull, Speed},
+    mode, peripherals,
     rcc::AdcClockSource,
     time::Hertz,
     timer::simple_pwm::{PwmPin, SimplePwm},
+    usart::{self, Uart},
 };
-use embassy_time::{Duration, Ticker, Timer};
+use embassy_time::{Duration, Ticker, WithTimeout};
 use fmt::info;
 use motor::Motors;
 
 bind_interrupts!(struct Irqs {
     ADC1_2 => embassy_stm32::adc::InterruptHandler<peripherals::ADC1>,
     embassy_stm32::adc::InterruptHandler<peripherals::ADC2>;
+    USART2 => embassy_stm32::usart::InterruptHandler<peripherals::USART2>;
 });
 
 static QEI_R_PULSES: AtomicI32 = AtomicI32::new(0);
 static QEI_L_PULSES: AtomicI32 = AtomicI32::new(0);
-static START_CONTROL: AtomicBool = AtomicBool::new(false);
+static MODE: AtomicU8 = AtomicU8::new(0);
+
+static UART: AtomicU32 = AtomicU32::new(0);
+static THETA: AtomicU32 = AtomicU32::new(0);
+static POSITION: AtomicU32 = AtomicU32::new(0);
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -91,7 +100,7 @@ async fn main(spawner: Spawner) {
     let mut led = Output::new(p.PB6, Level::Low, Speed::Low);
 
     // Button
-    let button = Input::new(p.PB5, Pull::Up);
+    let mut button = ExtiInput::new(p.PB5, p.EXTI5, Pull::Up);
 
     // ADC1
     let mut adc1 = Adc::new(p.ADC1, Irqs);
@@ -178,19 +187,49 @@ async fn main(spawner: Spawner) {
     // Initialize Motor Controller
     let motors = Motors::new(motor_r_1_2, motor_l_1, motor_l_2);
 
+    let mut uart_config = usart::Config::default();
+    uart_config.baudrate = 500000;
+    let uart = Uart::new(
+        p.USART2,
+        p.PA15,
+        p.PA2,
+        Irqs,
+        p.DMA1_CH7,
+        p.DMA1_CH6,
+        uart_config,
+    )
+    .unwrap();
+
     // Spawn control task
     spawner.spawn(control_task(motors)).unwrap();
 
-    loop {
-        led.set_high();
-        Timer::after(Duration::from_millis(100)).await;
-        led.set_low();
-        Timer::after(Duration::from_millis(100)).await;
+    // Spawn UART task
+    spawner.spawn(uart_task(uart)).unwrap();
 
-        // Check button state
-        if button.is_low() {
-            sensor::adc::calibrate_theta_offsets();
-            START_CONTROL.store(true, Ordering::Relaxed);
+    let mut button_pressed_count = 0;
+
+    loop {
+        // Wait for button press to start control
+        button.wait_for_falling_edge().await;
+        button_pressed_count += 1;
+
+        // ADC
+        calibrate_theta_offsets();
+
+        match button_pressed_count {
+            1 => {
+                MODE.store(1, Ordering::Relaxed);
+                led.set_high();
+            }
+            2 => {
+                MODE.store(2, Ordering::Relaxed);
+                led.set_high();
+            }
+            _ => {
+                MODE.store(0, Ordering::Relaxed);
+                led.set_low();
+                button_pressed_count = 0; // Reset count after stopping control
+            }
         }
     }
 }
@@ -224,11 +263,32 @@ async fn control_task(mut motors: Motors) {
     let mut ticker = Ticker::every(Duration::from_hz(CONTROL_LOOP_FREQUENCY as u64));
 
     let mut sensor_data = SensorManager::new(1.0 / CONTROL_LOOP_FREQUENCY as f32);
-    let mut controller_system = ControllerSystem::new_adaptive(1.0 / CONTROL_LOOP_FREQUENCY as f32);
+    let mut controller_system = ControllerSystem::new_lqr();
     controller_system.reset();
+    let mut current_mode = 0u8;
 
     loop {
-        if START_CONTROL.load(Ordering::Relaxed) {
+        let mode = MODE.load(Ordering::Relaxed);
+
+        // Check if mode has changed and switch controller accordingly
+        if mode != current_mode {
+            match mode {
+                1 => {
+                    info!("Switching to LQR controller");
+                    controller_system.switch_to_lqr();
+                }
+                2 => {
+                    info!("Switching to UART controller");
+                    controller_system.switch_to_uart();
+                }
+                _ => {
+                    info!("Stopping control");
+                }
+            }
+            current_mode = mode;
+        }
+
+        if mode != 0 {
             // Get ADC data directly without mutex
             let theta0 = get_theta0_radians();
             let theta1 = get_theta1_radians();
@@ -243,17 +303,76 @@ async fn control_task(mut motors: Motors) {
                 QEI_L_PULSES.load(Ordering::Relaxed),
             );
 
-            let result = controller_system.compute_control(&sensor_data);
+            if mode == 1 {
+                // LQR control
+                let result = controller_system.compute_control(&sensor_data);
+                if let Ok(output) = result {
+                    motors.set_duty_both(output.duty_l, output.duty_r);
+                } else {
+                    info!("Control computation failed");
+                }
+            } else if mode == 2 {
+                let position = (sensor_data.position_r + sensor_data.position_l) / 2.0;
 
-            if let Ok(output) = result {
-                motors.set_duty_both(output.duty_l, output.duty_r);
-            } else {
-                info!("Control computation failed");
+                THETA.store(sensor_data.theta0.to_bits(), Ordering::Relaxed);
+                POSITION.store(position.to_bits(), Ordering::Relaxed);
+
+                let force = f32::from_bits(UART.load(Ordering::Relaxed) as u32);
+
+                // Set force command to UART controller and compute control
+                controller_system.set_uart_force_command(force);
+                let result = controller_system.compute_control(&sensor_data);
+                if let Ok(output) = result {
+                    motors.set_duty_both(output.duty_l, output.duty_r);
+                } else {
+                    info!("UART control computation failed");
+                }
             }
         } else {
             motors.stop();
         }
 
         ticker.next().await;
+    }
+}
+
+#[embassy_executor::task]
+async fn uart_task(mut uart: Uart<'static, mode::Async>) {
+    let mut buf = [0u8; 6];
+    loop {
+        if MODE.load(Ordering::Relaxed) != 2 {
+            embassy_time::Timer::after(Duration::from_millis(200)).await;
+            continue;
+        }
+
+        let theta = THETA.load(Ordering::Relaxed);
+        let position = POSITION.load(Ordering::Relaxed);
+
+        let data = [
+            0x90,
+            0x80,
+            position as u8,
+            (position >> 8) as u8,
+            (position >> 16) as u8,
+            (position >> 24) as u8,
+            theta as u8,
+            (theta >> 8) as u8,
+            (theta >> 16) as u8,
+            (theta >> 24) as u8,
+        ];
+        let _ = uart.write(&data).await;
+
+        if uart
+            .read(&mut buf)
+            .with_timeout(Duration::from_millis(10))
+            .await
+            .is_ok()
+        {
+            if buf[0] == 0x90 && buf[1] == 0x80 {
+                let force = f32::from_ne_bytes(buf[2..6].try_into().unwrap());
+
+                UART.store(force.to_bits() as u32, Ordering::Relaxed);
+            }
+        }
     }
 }

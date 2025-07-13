@@ -1,4 +1,4 @@
-use crate::{constants, fmt::info};
+use crate::constants;
 
 pub mod adc;
 pub mod qei;
@@ -48,14 +48,20 @@ impl SensorManager {
         }
     }
 
-    pub fn update_direct(&mut self, theta0: f32, theta1: f32, current_r: f32, current_l: f32, qei_r: i32, qei_l: i32) {
+    pub fn update_direct(
+        &mut self,
+        theta0: f32,
+        theta1: f32,
+        current_r: f32,
+        current_l: f32,
+        qei_r: i32,
+        qei_l: i32,
+    ) {
         // Update sensor data directly from optimized ADC functions
         self.theta0 = theta0;
         self.theta1 = theta1;
         self.current_r = current_r;
         self.current_l = current_l;
-
-        info!("Theta0: {}, Theta1: {}", self.theta0, self.theta1);
 
         let position_r = constants::pulses_to_position(qei_r);
         let position_l = -constants::pulses_to_position(qei_l);
@@ -80,5 +86,4 @@ impl SensorManager {
         self.prev_qei_r = qei_r;
         self.prev_qei_l = qei_l;
     }
-
 }
