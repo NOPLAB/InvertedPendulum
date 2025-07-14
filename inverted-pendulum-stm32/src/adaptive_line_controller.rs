@@ -3,7 +3,6 @@
 
 use crate::constants::*;
 use crate::controller::{ControlReferences, ControllerError, HighLevelController};
-use crate::fmt::info;
 use crate::line_controller::{LineController, LineControllerError};
 use crate::lpf::LowPassFilter;
 use crate::mit_adaptive_controller::MitAdaptiveController;
@@ -50,7 +49,7 @@ impl AdaptiveLineController {
             theta_filter: LowPassFilter::new(sample_time, THETA_FILTER_CUTOFF_FREQ, 1.0),
             prev_filtered_theta: 0.0,
             theta_velocity: 0.0,
-            target_velocity: 0.01,    // 目標前進速度 [m/s]
+            target_velocity: 0.0,     // 目標前進速度 [m/s]
             position_reference: 0.0,  // 初期位置リファレンス
             target_theta_offset: 0.0, // 目標前傾角度 [rad]
         }
@@ -111,10 +110,10 @@ impl AdaptiveLineController {
         let dx = (sensor_data.velocity_r + sensor_data.velocity_l) / 2.0;
         let theta = self.theta_filter.update(sensor_data.theta0);
 
-        info!(
+        /* info!(
             "Line offset: {}, Position ref: {}, Position actual: {}, Theta: {}",
             line_follow, self.position_reference, x, theta
-        );
+        ); */
 
         // 角速度を計算（フィルタ後のtheta微分）
         self.theta_velocity = (theta - self.prev_filtered_theta) / DT;

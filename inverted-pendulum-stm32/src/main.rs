@@ -46,7 +46,7 @@ use embassy_stm32::{
     timer::simple_pwm::{PwmPin, SimplePwm},
     usart::{self, Uart},
 };
-use embassy_time::{Duration, Ticker, WithTimeout};
+use embassy_time::{Duration, Ticker, Timer, WithTimeout};
 use fmt::info;
 use motor::Motors;
 
@@ -237,6 +237,9 @@ async fn main(spawner: Spawner) {
                 button_pressed_count = 0; // Reset count after stopping control
             }
         }
+
+        // Wait for 100ms
+        Timer::after_millis(200).await;
     }
 }
 
@@ -285,7 +288,7 @@ async fn control_task(mut motors: Motors) {
                 }
                 2 => {
                     info!("Switching to Adaptive Line controller");
-                    controller_system.switch_to_adaptive_line(1.0 / CONTROL_LOOP_FREQUENCY as f32);
+                    controller_system.switch_to_adaptive(1.0 / CONTROL_LOOP_FREQUENCY as f32);
                 }
                 3 => {
                     info!("Switching to UART controller");
@@ -314,7 +317,7 @@ async fn control_task(mut motors: Motors) {
             );
 
             if mode == 1 {
-                // LQR control
+                // LQR Control
                 let result = controller_system.compute_control(&sensor_data);
                 if let Ok(output) = result {
                     motors.set_duty_both(output.duty_l, output.duty_r);
@@ -322,24 +325,12 @@ async fn control_task(mut motors: Motors) {
                     info!("Control computation failed");
                 }
             } else if mode == 2 {
-                // New Adaptive Line Tracing control
+                // Adaptive Control
                 let result = controller_system.compute_control(&sensor_data);
                 if let Ok(output) = result {
                     motors.set_duty_both(output.duty_l, output.duty_r);
-
-                    // デバッグ情報の出力（必要に応じてコメントアウト）
-
-                    /* if let Some(line_detected) = controller_system.is_adaptive_line_detected() {
-                        if line_detected {
-                            if let Some(line_pos) = controller_system.get_adaptive_line_position() {
-                                info!("Line detected at position: {}", line_pos);
-                            }
-                        } else {
-                            info!("No line detected");
-                        }
-                    } */
                 } else {
-                    info!("Adaptive Line control computation failed");
+                    info!("Adaptive control computation failed");
                 }
             } else if mode == 3 {
                 let position = (sensor_data.position_r + sensor_data.position_l) / 2.0;
