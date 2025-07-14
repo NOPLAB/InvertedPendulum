@@ -53,15 +53,21 @@
         },
         {
             "type": "cmake",
+            "label": "CMake: configure Release",
+            "command": "configure",
+            "preset": "Release",
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "CMake configure Release preset"
+        },
+        {
+            "type": "cmake",
             "label": "CMake: build Release",
             "command": "build",
             "targets": [
                 "all"
             ],
-            "preset": "${command:cmake.activeBuildPresetName}",
-            "options": {
-                "buildType": "Release"
-            },
+            "preset": "Release",
             "group": "build",
             "problemMatcher": [],
             "detail": "CMake build Release task"
@@ -70,6 +76,7 @@
             "label": "Build Release + Flash",
             "dependsOrder": "sequence",
             "dependsOn": [
+                "CMake: configure Release",
                 "CMake: build Release",
                 "CubeProg: Flash project (SWD)"
             ]
@@ -81,9 +88,8 @@
             "targets": [
                 "all"
             ],
-            "preset": "${command:cmake.activeBuildPresetName}",
+            "preset": "Release",
             "options": {
-                "buildType": "Release",
                 "environment": {
                     "ENABLE_STM32_TESTS": "1"
                 }
@@ -96,6 +102,7 @@
             "label": "Build Release with Tests + Flash",
             "dependsOrder": "sequence",
             "dependsOn": [
+                "CMake: configure Release",
                 "CMake: build Release with Tests",
                 "CubeProg: Flash project (SWD)"
             ]

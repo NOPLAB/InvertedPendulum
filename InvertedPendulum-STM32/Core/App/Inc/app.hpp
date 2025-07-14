@@ -40,8 +40,11 @@ extern "C" {
 #define POT_ELECTRICAL_ANGLE 333.3f  // ポテンショメータ電気的有効角 [度]
 #define POT_SUPPLY_VOLTAGE 5.0f      // ポテンショメータ電源電圧 [V]
 #define ADC_VREF_VOLTAGE 3.3f        // ADC基準電圧 [V]
-#define VOLTAGE_DIVIDER_RATIO (ADC_VREF_VOLTAGE / POT_SUPPLY_VOLTAGE)  // 電圧分割比
-#define ADV_TO_RAD ((POT_ELECTRICAL_ANGLE * (2.0f * PI / 360.0f)) / VOLTAGE_DIVIDER_RATIO)  // ADC値からラジアンへの変換
+#define VOLTAGE_DIVIDER_RATIO \
+  (ADC_VREF_VOLTAGE / POT_SUPPLY_VOLTAGE)  // 電圧分割比
+#define ADV_TO_RAD                                 \
+  ((POT_ELECTRICAL_ANGLE * (2.0f * PI / 360.0f)) / \
+   VOLTAGE_DIVIDER_RATIO)  // ADC値からラジアンへの変換
 #define PULSE_TO_POSITION      \
   (2.0f * PI * WHEEL_RADIUS) / \
       (12.0f * 4.0f * GEAR_RATIO)  // エンコーダのパルスから位置[m]への変換
