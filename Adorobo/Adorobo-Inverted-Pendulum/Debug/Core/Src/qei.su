@@ -1,0 +1,7 @@
+../Core/Src/qei.c:8:6:QEI_Init	32	static
+../Core/Src/qei.c:28:6:QEI_Reset	16	static
+../Core/Src/qei.c:33:5:QEI_GetPulses	16	static
+../Core/Src/qei.c:37:5:QEI_GetRevolutions	16	static
+../Core/Src/qei.c:41:5:QEI_GetCurrentState	16	static
+../Core/Src/qei.c:46:19:QEI_ReadChan	16	static
+../Core/Src/qei.c:50:6:QEI_Encode	32	static
