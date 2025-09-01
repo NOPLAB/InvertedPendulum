@@ -352,16 +352,16 @@ dependencies = [
 
 [[package]]
 name = "embassy-sync"
-version = "0.7.0"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cef1a8a1ea892f9b656de0295532ac5d8067e9830d49ec75076291fd6066b136"
+checksum = "73974a3edbd0bd286759b3d483540f0ebef705919a5f56f4fc7709066f71689b"
 dependencies = [
  "cfg-if",
  "critical-section",
  "defmt 1.0.1",
  "embedded-io-async",
+ "futures-core",
  "futures-sink",
- "futures-util",
  "heapless",
 ]
 
@@ -573,7 +573,7 @@ dependencies = [
  "embassy-executor",
  "embassy-futures",
  "embassy-stm32",
- "embassy-sync 0.7.0",
+ "embassy-sync 0.7.2",
  "embassy-time",
  "micromath",
  "panic-halt",
